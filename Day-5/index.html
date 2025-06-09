@@ -4,34 +4,96 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Login Page</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="navbar">
-        <div class="header_pattern">
-            <img src="./Assets/header pattern image.png" alt="header pattern">
-        </div>
+      <div class="mainHeader">
         <div class="header_logo">
             <img src="/Day-5/Assets/icons/logo used in header.svg" alt="logo">
         </div>
+      </div>
     </div>
 
     <div class="login_form">
-        <form action="">
+        <form action="" class="mainDiv">
             <div class="login_header">
                 <div class="login_name">Log in With Quantum</div>
                 <div class="left_arrow">
                     <img src="/Day-5/Assets/icons/back.svg" alt="left arrow">
                 </div>
             </div>
+
+            <div class="radio_div">
+                <span>
+                  <input type="radio" name="radioButton" class="custom-radio"> 
+                <label for="radio" class="radio_text">District</label>
+                </span>
+                <span>
+                <input type="radio" name="radioButton" class="custom-radio">
+                <label for="radio" class="radio_text">Independent school</label>
+                </span>
+            </div>
+            
+            <div class="dropdown-container">
+                <label>State*</label>
+                <select class="dropdown" id="stateId">
+                    <option value="Albas">Albas</option>
+                    <option value="Albas">Albas</option>
+                    <option value="Albas">Albas</option>
+                    <option value="Albas">Albas</option>
+                    <option value="Albas">Albas</option>
+                </select>
+            </div>
+            
+            <div class="dropdown-container">
+                <label>District*</label>
+                <select class="dropdown" id="stateId">
+                    <option value="Alabama School District">Alabama School District</option>
+                    <option value="Alabama School District">Alabama School District</option>
+                    <option value="Alabama School District">Alabama School District</option>
+                    <option value="Alabama School District">Alabama School District</option>
+                    <option value="Alabama School District">Alabama School District</option>
+                </select>
+            </div>
+
+            <div class="inputField">
+                <input type="text" placeholder="Username/Email ID*" class="input_field">
+                <a href="#" class="forgot">FORGOT USERNAME?</a>
+            </div>
+
+            <div class="inputField">
+                <input type="text" placeholder="Password*" class="input_field">
+                <img src="/Day-5/Assets/icons/preview.svg" alt="show Password" class="preview">
+                <a href="#" class="forgot">FORGOT PASSWORD?</a>
+            </div>
+
+            <div class="checkBox_div">
+                <input type="checkbox" class="checkbox">
+                <label for="checkbox" class="checkbox_label">Remember Me</label>
+            </div>
+
+            <div class="button">
+                <button class="login_button">LOG IN</button>
+            </div>
         </form>
     </div>
 
     <div class="footer">
-        <div class="footerImage">
+        <div class="aboutUs">
+            <div class="content1">About</div>
+            <div class="line"></div>
+            <div class="content2">Contect Us</div>
+        </div>
+
+        <div class="footercontent">
+            <div class="footerImage">
             <img src="/Day-5/Assets/icons/logo used in footer.svg" alt="footer logo">
-        </div>        
+        </div>     
+        <div class="line">
+            
+        </div>   
         <div class="footerContent">
             Copyright © 2020-2021 
         </div>
@@ -40,6 +102,7 @@
         </div>
         <div class="footerContent">
             All rights reserved.
+        </div>
         </div>
     </div>
 </body>

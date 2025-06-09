@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="navbar navbar-expand-lg" >
+        <div class="mainHeader">
+          <div class="header_logo">
+            <img src="../Assets/icons/logo used in header.svg" alt="logo" />
+          </div>
+          <div class="content">
+            <div class="headerContet">
+              <a href="#">DASHBOARD</a>
+              <a href="#">CONTENT</a>
+              <a href="#">USERS</a>
+              <a href="#">REPORTS</a>
+              <a href="#">ADMIN</a>
+            </div>
+            <div class="HeaderIcons">
+              <a href="#">
+                <img src="../Assets/icons/alerts.svg" alt="alert Icon" />
+              </a>
+              <a href="#">
+                <img
+                  src="../Assets/icons/announcements.svg"
+                  alt="announcements"
+                />
+              </a>
+              <a href="#">
+                <img src="../Assets/icons/account_circle.svg" alt="" />
+              </a>
+            </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon">
+        <img src="../Assets/icons/hamburger-menu.svg" alt="collapseicon">
+      </span>
+    </button>
+          </div>
+
+        </div>
+        <div class="collapse headerContetMob" id="navbarSupportedContent">
+              <a href="#">DASHBOARD</a>
+              <a href="#">CONTENT</a>
+              <a href="#">USERS</a>
+              <a href="#">REPORTS</a>
+              <a href="#">ADMIN</a>
+            </div>
+      </div>
+
+      <div class="image-content">
+        <div class="toggle">
+          <div class="courses">
+            <img src="../Assets/icons/courses.svg" alt="course icon" />
+            <div class="toggleText">
+              <p class="number">4</p>
+              <p>Courses</p>
+            </div>
+          </div>
+
+          <div class="clsses">
+            <img src="../Assets/icons/classes.svg" alt="class icon" />
+            <div class="toggleText">
+              <p class="number">4</p>
+              <p>Classes</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="contetnInfo">
+          <div class="CourseShow">
+            <p>Showing 4 of 4 courses</p>
+          </div>
+          <div class="dropdown-container">
+                <label>Sort By:</label>
+                <select class="dropdown" id="stateId" >
+                    <option value="Course Name">Course Name</option>
+                    <option value="Course Name">Course Name</option>
+                    <option value="Course Name">Course Name</option>
+                    <option value="Course Name">Course Name</option>
+                    <option value="Course Name">Course Name</option>
+                </select>
+            </div>
+            <img src="../Assets/icons/sort.svg" alt="">
+        </div>
+      </div>
+
+      <div class="imgContent">
+        <div class="card">
+          <div class="cardContent">
+            <div class="cardImage">
+              <img src="../Assets/images/imageMask-1.svg" alt="card Image">
+            </div>
+            <div class="cardText">
+              <div class="card_title">
+                  Acceleration
+                  <img src="../Assets/icons/favourite.svg" alt="favourite" />
+                </div>
+                <div class="card_text">
+                  Physics
+                  <div class="devider"></div>
+                  Grade 7
+                  <span class="card_text_green">+2</span>
+                </div>
+                <div class="card_text">
+                  <span><b style="color: black">4</b> Units</span>
+                  <span><b style="color: black">18</b> Lessons</span>
+                  <span><b style="color: black">24</b> Topics</span>
+                </div>
+                <div class="card_select_div">
+                  <select class="card_select" name="classes" id="classes">
+                    <option value="op1">Mr. Frank's Class B</option>
+                    <option value="op2">Mr. Frank's Class A</option>
+                    <option value="op3">Mr. Frank's Class C</option>
+                  </select>
+                </div>
+                <div class="card_text">
+                  50 students <span class="devider"></span> 21-Aug-2020 -
+                  21-Aug-2020
+                </div>
+            </div>
+          </div>
+          <div class="cardIcons">
+            <div class="preview">
+              <img src="../Assets/icons/preview.svg" alt="preview icon">
+            </div>
+            <div class="mngCourse">
+              <img src="../Assets/icons/manage course.svg" alt="manage course icon">
+            </div>
+            <div class="grdSubmission">
+              <img src="../Assets/icons/grade submissions.svg" alt="grade submissions icon">
+            </div>
+            <div class="reports">
+              <img src="../Assets/icons/reports.svg" alt="reports icon">
+            </div>
+          </div>
+          </div>
+          <div class="card">
+          <div class="cardContent">
+            <div class="cardImage">
+              <img src="../Assets/images/imageMask-2.svg" alt="card Image">
+            </div>
+            <div class="cardText">
+              <div class="card_title">
+                  Displacement, Velocity and Speed
+                  <img src="../Assets/icons/favourite.svg" alt="favourite" />
+                </div>
+                <div class="card_text">
+                  Physics 2
+                  <div class="devider"></div>
+                  Grade 6
+                  <span class="card_text_green">+3</span>
+                </div>
+                <div class="card_text">
+                  <span><b style="color: black">2</b> Units</span>
+                  <span><b style="color: black">15</b> Lessons</span>
+                  <span><b style="color: black">20</b> Topics</span>
+                </div>
+                <div class="card_select_div">
+                  <select class="card_select" name="classes" id="classes">
+                    <option value="op1">No Classes</option>
+                    <option value="op2">Mr. Frank's Class A</option>
+                    <option value="op3">Mr. Frank's Class C</option>
+                  </select>
+                </div>
+            </div>
+          </div>
+          <div class="cardIcons">
+            <div class="preview">
+              <img src="../Assets/icons/preview.svg" alt="preview icon">
+            </div>
+            <div class="mngCourse">
+              <img src="../Assets/icons/manage course2.svg" alt="manage course icon">
+            </div>
+            <div class="grdSubmission">
+              <img src="../Assets/icons/grade submissions2.svg" alt="grade submissions icon">
+            </div>
+            <div class="reports">
+              <img src="../Assets/icons/reports.svg" alt="reports icon">
+            </div>
+          </div>
+          </div>
+          <div class="card">
+          <div class="cardContent">
+            <div class="cardImage">
+              <img src="../Assets/images/imageMask.svg" alt="card Image">
+            </div>
+            <div class="cardText">
+              <div class="card_title">
+                  Introduction to Biology: Micro organisms and how they affect the other Life Systems in En...
+                  <img src="../Assets/icons/favourite.svg" alt="favourite" />
+                </div>
+                <div class="card_text">
+                  Biology
+                  <div class="devider"></div>
+                  Grade 4
+                  <span class="card_text_green">+1</span>
+                </div>
+                <div class="card_text">
+                  <span><b style="color: black">5</b> Units</span>
+                  <span><b style="color: black">16</b> Lessons</span>
+                  <span><b style="color: black">24</b> Topics</span>
+                </div>
+                <div class="card_select_div">
+                  <select class="card_select" name="classes" id="classes">
+                    <option value="op1">All Classes</option>
+                    <option value="op2">Mr. Frank's Class A</option>
+                    <option value="op3">Mr. Frank's Class C</option>
+                  </select>
+                </div>
+                <div class="card_text">
+                  300 students
+                </div>
+            </div>
+          </div>
+          <div class="cardIcons">
+            <div class="preview">
+              <img src="../Assets/icons/preview.svg" alt="preview icon">
+            </div>
+            <div class="mngCourse">
+              <img src="../Assets/icons/manage course2.svg" alt="manage course icon">
+            </div>
+            <div class="grdSubmission">
+              <img src="../Assets/icons/grade submissions2.svg" alt="grade submissions icon">
+            </div>
+            <div class="reports">
+              <img src="../Assets/icons/reports.svg" alt="reports icon">
+            </div>
+          </div>
+          </div>
+
+          <div class="card">
+          <div class="cardContent">
+            <div class="cardImage">
+              <img src="../Assets/images/imageMask-3.svg" alt="card Image">
+            </div>
+            <div class="cardText">
+              <div class="card_title">
+                  Introduction to High School Mathematics
+                  <img src="../Assets/icons/favourite2.svg" alt="favourite" />
+                </div>
+                <div class="card_text">
+                  Mathematics
+                  <div class="devider"></div>
+                  Grade 8
+                  <span class="card_text_green">+3</span>
+                </div>
+                <div class="card_select_div">
+                  <select class="card_select" name="classes" id="classes">
+                    <option value="op1">Mr. Frank's Class B</option>
+                    <option value="op2">Mr. Frank's Class A</option>
+                    <option value="op3">Mr. Frank's Class C</option>
+                  </select>
+                </div>
+                <div class="card_text">
+                  44 students <span class="devider"></span> 14-Oct-2019 -
+                  20-Oct-2019
+                </div>
+            </div>
+          </div>
+          <div class="cardIcons">
+            <div class="preview">
+              <img src="../Assets/icons/preview.svg" alt="preview icon">
+            </div>
+            <div class="mngCourse">
+              <img src="../Assets/icons/manage course.svg" alt="manage course icon">
+            </div>
+            <div class="grdSubmission">
+              <img src="../Assets/icons/grade submissions.svg" alt="grade submissions icon">
+            </div>
+            <div class="reports">
+              <img src="../Assets/icons/reports.svg" alt="reports icon">
+            </div>
+          </div>
+          <div class="expired">
+            EXPIRED
+          </div>
+      </div>
+    </div>
+
+      <div class="footer">
+        <div class="aboutUs">
+          <div class="content1">About</div>
+          <div class="line"></div>
+          <div class="content2">Contect Us</div>
+        </div>
+
+        <div class="footercontent">
+          <div class="footerImage">
+            <img
+              src="/Day-5/Assets/icons/logo used in footer.svg"
+              alt="footer logo"
+            />
+          </div>
+          <div class="line"></div>
+          <div class="footerContent">Copyright © 2020-2021</div>
+          <div class="footerContent">Zeus Systems Pvt. Ltd.</div>
+          <div class="footerContent">All rights reserved.</div>
+        </div>
+      </div>
+    </div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
