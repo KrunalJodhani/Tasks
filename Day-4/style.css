@@ -1,0 +1,115 @@
+body {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.main {
+  display: grid;
+  grid-gap: 2px;
+  grid-template-columns: 1fr 1.25fr 1.25fr;
+  grid-template-rows: 1fr 2.25fr 2.25fr 1.25fr;
+  height: 500px;
+  width: 650px;
+  grid-template-areas:
+    "h h h"
+    "s c1 c1"
+    "s c2 c3"
+    "f f f";
+}
+
+.header {
+  grid-area: h;
+  border: 2px solid #9aa0b2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  background: linear-gradient(
+    90deg,
+    rgba(110, 85, 217, 1) 0%,
+    rgba(128, 106, 223, 1) 50%,
+    rgba(142, 122, 226, 1) 100%
+  );
+}
+
+.sidebar {
+  grid-area: s;
+  border: 2px solid #9aa0b2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #3cdbd3;
+  color: white;
+  background: linear-gradient(
+    208deg,
+    rgba(60, 219, 211, 1) 0%,
+    rgba(50, 188, 181, 1) 50%,
+    rgba(41, 164, 157, 1) 100%
+  );
+}
+
+.content-1 {
+  grid-area: c1;
+  border: 2px solid #9aa0b2;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #6c54dc;
+  background: linear-gradient(
+    90deg,
+    rgba(108, 84, 220, 1) 0%,
+    rgba(58, 138, 239, 1) 50%,
+    rgba(53, 209, 225, 1) 100%
+  );
+}
+
+.content-2 {
+  grid-area: c2;
+  border: 2px solid #9aa0b2;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #6c54dc;
+  background: linear-gradient(
+    90deg,
+    rgba(108, 84, 220, 1) 0%,
+    rgba(58, 138, 239, 1) 50%,
+    rgba(53, 209, 225, 1) 100%
+  );
+}
+
+.content-3 {
+  grid-area: c3;
+  border: 2px solid #9aa0b2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  background: #645bdd;
+  background: linear-gradient(
+    132deg,
+    rgba(100, 91, 221, 1) 0%,
+    rgba(56, 141, 241, 1) 50%,
+    rgba(53, 209, 225, 1) 100%
+  );
+}
+
+.footer {
+  grid-area: f;
+  border: 2px solid #9aa0b2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  background: #6f55da;
+  background: linear-gradient(
+    132deg,
+    rgba(111, 85, 218, 1) 0%,
+    rgba(127, 105, 222, 1) 50%,
+    rgba(143, 123, 227, 1) 100%
+  );
+}
