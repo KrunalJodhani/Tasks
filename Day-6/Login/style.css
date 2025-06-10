@@ -1,3 +1,8 @@
+@charset "UTF-8";
+@font-face {
+  font-family: "Quicksand";
+  src: url("/Day-5/Assets/Quicksand font 1/Quicksand-VariableFont_wght.ttf");
+}
 h1,
 h2,
 h3,
@@ -7,16 +12,11 @@ p {
   padding: 0px;
 }
 
-@font-face {
-  font-family: "Quicksand";
-  src: url("Assets/Quicksand\ font\ 1/Quicksand-VariableFont_wght.ttf");
-}
-
 body {
   min-height: 100vh;
   margin: 0px;
   padding: 0px;
-  background-color: #EEEEEE;
+  background-color: #eeeeee;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -28,42 +28,39 @@ body {
   height: 58px;
   position: relative;
   top: 10px;
-  left : 5px; 
+  left: 5px;
 }
 
 .header_logo {
-  object-fit: cover;
-  background: #1f2935b0;
+  -o-object-fit: cover;
+     object-fit: cover;
+  background: rgba(31, 41, 53, 0.6901960784);
   position: relative;
   padding-left: 20px;
   padding-top: 8px;
 }
 
-.navbar{
-  border-bottom: 2px solid #31B9E4;
+.navbar {
+  border-bottom: 2px solid #3ac7ec;
 }
 
-.mainHeader{
-  background-image: url(Assets/header\ pattern\ svg.svg);
+.mainHeader {
+  background-image: url(/Day-5/Assets/header\ pattern\ svg.svg);
 }
 
 .login_form {
   width: 488px;
   height: 550px;
   background: #ffffff;
-  margin-top: 40px;
+  margin: 40px auto;
   flex: 1;
-  margin-bottom: 40px;
-  margin-right: auto;
-  margin-left: auto;
   border-top: 5px solid #3ac7ec;
   padding: 32px;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  border-radius: 2px 2px 0px 0px;
 }
-
-.mainDiv{
+.login_form .mainDiv {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -81,77 +78,65 @@ body {
   width: 100%;
   margin-top: -15px;
 }
-
-.left_arrow {
+.login_header .left_arrow {
   left: 1px;
   position: absolute;
 }
-
-.login_name {
+.login_header .login_name {
   color: #222222;
   font-weight: bold;
   font-size: 24px;
 }
 
-.footer{
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-
-.aboutUs{
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  color:#1F7A54;
-}
-
-.footercontent {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
-  background: #e0e1e1;
-  height: 40px;
-  align-items: center;
-  gap: 15px;
-  color: #616161;
-}
-
-.footerContent {
-  font-size: 12px;
-}
-
-.footer img {
-  width: 90px;
-  height: 24px;
-}
-
 .radio_div {
-  margin-left: -10px;  
+  margin-left: -10px;
+  display: flex;
+  gap: 32px;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
 }
-
-.line {
-  border: 1px solid #0000001f;
-  opacity: 1;
-  height: 24px;
+.radio_div span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-input:focus,
-select:focus {
-  outline: none;
+.radio_div input[type=radio] {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #1f7a54;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
-
-.dropdown {
-  border: 0;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 10px 0;
+.radio_div input[type=radio]:checked {
+  background-color: #ffffff;
+  border-color: #1f7a54;
+}
+.radio_div input[type=radio]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: #1f7a54;
+  border-radius: 50%;
+}
+.radio_div .radio_text {
+  color: #222222;
   font-size: 16px;
-  font-weight: 400;
+  margin-left: 4px;
+  font-weight: 500;
 }
 
 .dropdown-container {
@@ -159,20 +144,6 @@ select:focus {
   display: inline-block;
   width: 100%;
 }
-
-.dropdown {
-  border: 0;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 10px 30px 10px 0;
-  font-size: 16px;
-  font-weight: 400;
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  cursor: pointer;
-  width: 100%;
-}
-
 .dropdown-container::after {
   content: "";
   position: absolute;
@@ -186,6 +157,19 @@ select:focus {
   border-top: 6px solid #666;
   pointer-events: none;
 }
+.dropdown-container .dropdown {
+  border: 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 30px 10px 0;
+  font-size: 16px;
+  font-weight: 400;
+  -moz-appearance: none;
+       appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
 
 .inputField {
   display: flex;
@@ -194,7 +178,6 @@ select:focus {
   position: relative;
   gap: 5px;
 }
-
 .inputField input {
   border: 0;
   border-bottom: 1px solid #e0e0e0;
@@ -202,15 +185,20 @@ select:focus {
   font-size: 16px;
   font-weight: 400;
 }
-
-.forgot {
+.inputField input:focus {
+  outline: none;
+}
+.inputField img {
+  position: absolute;
+  right: 0px;
+}
+.inputField .forgot {
   text-decoration: none;
   color: #1f7a54;
   margin-right: 0px;
   align-self: flex-end;
 }
-
-.preview {
+.inputField .preview {
   width: 22px;
   height: 15px;
   margin-top: 10px;
@@ -221,12 +209,12 @@ select:focus {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  /* align-items: center; */
   gap: 8px;
 }
-
-.checkbox {
-  appearance: none;
+.checkBox_div .checkbox {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
   width: 20px;
   height: 20px;
   border: 2px solid #1f7a54;
@@ -235,102 +223,85 @@ select:focus {
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
-.checkbox:checked {
+.checkBox_div .checkbox:checked {
   background-color: #1f7a54;
   border-color: #1f7a54;
 }
-
-.checkbox:checked::after {
+.checkBox_div .checkbox:checked::after {
   content: "✓";
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: white;
+  color: #ffffff;
   font-size: 14px;
   font-weight: bold;
   line-height: 1;
 }
 
-.login_button {
+.button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0px 3px 5px rgba(31, 122, 84, 0.3);
+}
+.button .login_button {
   width: 216px;
   height: 40px;
-  background: #3FD28B 0% 0% no-repeat padding-box;;
+  background: #3fd28b 0% 0% no-repeat padding-box;
   color: #ffffff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   justify-content: center;
 }
-
-.login_button:hover {
+.button .login_button:hover {
   background-color: #1f7a54;
 }
 
-.button{
+.footer {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  box-shadow: 0px 3px 5px#1F7A54;
+  gap: 10px;
 }
-
-.radio_div span {
+.footer img {
+  width: 90px;
+  height: 24px;
+}
+.footer .aboutUs {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
- 
-.radio_div input[type="radio"] {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #1f7a54;
-  border-radius: 50%;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
- 
-.custom-radio:checked {
-  background-color: white;
-  border-color: #1f7a54;
-}
- 
-.custom-radio:checked::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 10px;
-  height: 10px;
-  background-color: #1f7a54;
-  border-radius: 50%;
-}
-
-.radio_div {
-  display: flex;
-  gap: 32px;
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
+  gap: 10px;
+  color: #1f7a54;
+}
+.footer .footercontent {
   width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  background: #e0e1e1;
+  height: 40px;
+  align-items: center;
+  gap: 15px;
+  color: #616161;
+}
+.footer .footerContent {
+  font-size: 12px;
 }
 
-.radio_text {
-  color: #222222;
-  font-size: 16px;
-  margin-left: 4px;
-  font-weight: 500;
+.line {
+  border: 1px solid rgba(0, 0, 0, 0.1215686275);
+  opacity: 1;
+  height: 24px;
 }
 
-.inputField img{
-  position: absolute;
-  right: 0px;
+input:focus,
+select:focus {
+  outline: none;
 }
 
 @media (min-width: 1200px) {
@@ -339,28 +310,23 @@ select:focus {
     height: auto;
     padding: 40px;
   }
-  
   .login_name {
     font-size: 28px;
   }
-  
   .mainDiv {
     gap: 30px;
   }
 }
-
 @media (max-width: 1199px) and (min-width: 992px) {
   .login_form {
     width: 488px;
     margin-top: 30px;
     margin-bottom: 30px;
   }
-  
   .header_pattern img {
     height: 50px;
   }
 }
-
 @media (max-width: 991px) and (min-width: 768px) {
   .login_form {
     width: 90%;
@@ -369,41 +335,33 @@ select:focus {
     margin-bottom: 25px;
     padding: 28px;
   }
-  
   .login_name {
     font-size: 22px;
   }
-  
   .mainDiv {
     gap: 20px;
   }
-  
   .header_pattern img {
     height: 45px;
     left: 0px;
   }
-  
   .header_logo {
     padding-left: 15px;
   }
-  
   .radio_div {
     gap: 24px;
   }
-  
   .footercontent {
     flex-direction: column;
     height: auto;
     padding: 15px 0;
     gap: 10px;
   }
-  
   .aboutUs {
     flex-wrap: wrap;
     gap: 8px;
   }
 }
-
 @media (max-width: 767px) and (min-width: 576px) {
   .login_form {
     width: 95%;
@@ -413,70 +371,57 @@ select:focus {
     padding: 24px;
     height: auto;
   }
-  
   .login_name {
     font-size: 20px;
   }
-  
   .mainDiv {
     gap: 18px;
   }
-  
   .header_pattern img {
     height: 40px;
     left: 0px;
   }
-  
   .header_logo {
     padding-left: 10px;
     padding-top: 6px;
   }
-  
   .radio_div {
     gap: 20px;
     flex-direction: column;
     align-items: flex-start;
   }
-  
   .radio_div span {
     justify-content: flex-start;
   }
-  
   .login_button {
     width: 100%;
     height: 45px;
     font-size: 16px;
   }
-  
   .footercontent {
     flex-direction: column;
     height: auto;
     padding: 12px 0;
     gap: 8px;
   }
-  
   .aboutUs {
     flex-direction: column;
     gap: 5px;
   }
-  
   .footer img {
     width: 80px;
     height: 20px;
   }
-  
   .inputField input,
-  .dropdown {
-    font-size: 16px; /* Prevents zoom on iOS */
+.inputField .dropdown {
+    font-size: 16px;
     padding: 12px 0;
   }
 }
-
 @media (max-width: 575px) {
   body {
     padding: 0 10px;
   }
-  
   .login_form {
     width: 100%;
     margin-top: 15px;
@@ -485,169 +430,140 @@ select:focus {
     height: auto;
     border-top-width: 3px;
   }
-  
   .login_name {
     font-size: 18px;
   }
-  
   .mainDiv {
     gap: 15px;
   }
-  
   .login_header {
     height: 25px;
   }
-  
   .header_pattern img {
     height: 35px;
     left: 0px;
   }
-  
   .header_logo {
     padding-left: 8px;
     padding-top: 4px;
   }
-  
   .radio_div {
     gap: 15px;
     flex-direction: column;
     align-items: flex-start;
   }
-  
   .radio_text {
     font-size: 14px;
   }
-  
   .login_button {
     width: 100%;
     height: 48px;
     font-size: 16px;
   }
-  
   .footercontent {
     flex-direction: column;
     height: auto;
     padding: 10px 5px;
     gap: 6px;
   }
-  
   .footerContent {
     font-size: 11px;
     text-align: center;
   }
-  
   .aboutUs {
     flex-direction: column;
     gap: 4px;
     font-size: 14px;
   }
-  
   .footer img {
     width: 70px;
     height: 18px;
   }
-  
   .inputField input,
-  .dropdown {
+.inputField .dropdown {
     font-size: 16px;
     padding: 14px 0;
   }
-  
   .dropdown-container::after {
     right: 5px;
     border-top: 5px solid #666;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
   }
-  
   .checkBox_div {
     align-items: flex-start;
     gap: 6px;
   }
-  
   .checkbox {
     width: 18px;
     height: 18px;
     margin-top: 2px;
   }
 }
-
 @media (max-width: 320px) {
   .login_form {
     padding: 16px;
     margin-top: 10px;
     margin-bottom: 10px;
   }
-  
   .login_name {
     font-size: 16px;
   }
-  
   .mainDiv {
     gap: 12px;
   }
-  
   .login_button {
     height: 44px;
     font-size: 15px;
   }
-  
   .radio_text {
     font-size: 13px;
   }
-  
   .footerContent {
     font-size: 10px;
   }
-  
   .footer img {
     width: 60px;
     height: 16px;
   }
 }
-
 @media (max-height: 500px) and (orientation: landscape) {
   .login_form {
     margin-top: 10px;
     margin-bottom: 10px;
     height: auto;
   }
-  
   .mainDiv {
     gap: 10px;
   }
-  
   .header_pattern img {
     height: 30px;
   }
-  
   .footercontent {
     padding: 8px 0;
   }
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header_pattern img,
-  .footer img {
+.footer img {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
   }
 }
-
 @media print {
   .header_pattern,
-  .footer,
-  .footercontent {
+.footer,
+.footercontent {
     display: none;
   }
-  
   .login_form {
     box-shadow: none;
     border: 1px solid #ccc;
+    border-radius: 2px 2px 0px 0px;
     margin: 0;
     width: 100%;
   }
-  
   body {
-    background-color: white;
+    background-color: #ffffff;
   }
-}
+}/*# sourceMappingURL=style.css.map */
