@@ -2,15 +2,41 @@ $primary-green: #3fd28b;
 $dark-green: #1f7a54;
 $light-green: #8ddc97;
 $primary-blue: #2a7ff3;
-$background-gray: #eeeeee;
-$light-gray: #e0e0e0;
-$medium-gray: #6e6e6e;
-$dark-gray: #666666;
-$text-gray: #616161;
-$white: #ffffff;
 $black: #000000;
-$light-yellow: #ffffee;
+$white: #ffffff;
+$light-gray: #eeeeee;
+$medium-gray: #e0e0e0;
+$dark-gray: #666666;
+$text-gray: #6e6e6e;
+$footer-gray: #616161;
+$footer-bg: #e0e1e1;
+$yellow-bg: #ffffee;
 $red: red;
+$red-bg: rgba(255, 0, 0, 0.185);
+
+$box-shadow: 0px 13px 20px rgba(0, 0, 0, 0.2392156863);
+$light-shadow: 0px 1px 6px rgba(0, 0, 0, 0.2392156863);
+
+$border-color: rgba(0, 0, 0, 0.1215686275);
+$border-dark: rgba(0, 0, 0, 0.2666666667);
+
+$mobile: 768px;
+$tablet: 992px;
+$desktop: 1200px;
+
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 10px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-xxl: 24px;
+$spacing-xxxl: 28px;
+
+$font-xs: 10px;
+$font-sm: 12px;
+$font-md: 14px;
+$font-lg: 16px;
+$font-xl: 18px;
 
 @mixin flex-center {
   display: flex;
@@ -18,7 +44,13 @@ $red: red;
   align-items: center;
 }
 
-@mixin text-ellipsis($lines: 2) {
+@mixin flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@mixin text-ellipsis($lines: 1) {
   display: -webkit-box;
   -webkit-line-clamp: $lines;
   -webkit-box-orient: vertical;
@@ -27,32 +59,50 @@ $red: red;
 }
 
 @mixin dropdown-arrow {
-  content: "";
-  position: absolute;
-  top: 70%;
-  right: 10px;
-  transform: translateY(-50%);
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid #666;
-  pointer-events: none;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 70%;
+    right: 10px;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid $dark-gray;
+    pointer-events: none;
+  }
+}
+
+@mixin button-reset {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 @font-face {
   font-family: "Quicksand";
-  src: url("Assets/Quicksand\ font\ 1/Quicksand-VariableFont_wght.ttf");
+  src: url("Assets/Quicksand font 1/Quicksand-VariableFont_wght.ttf");
+}
+
+* {
+  box-sizing: border-box;
 }
 
 h1, h2, h3, h4, p {
-  margin: 0px !important;
-  padding: 0px;
+  margin: 0 !important;
+  padding: 0;
 }
 
 body {
   min-height: 100vh;
-  margin: 0px;
-  padding: 0px;
-  background-color: $background-gray;
+  margin: 0;
+  padding: 0;
+  background-color: $light-gray;
   font-family: "Quicksand", sans-serif;
 }
 
@@ -64,12 +114,12 @@ input, select {
 
 ::-webkit-scrollbar {
   width: 4px;
-
+  
   &-track {
     border-radius: 6px;
     background: #f1f1f1;
   }
-
+  
   &-thumb {
     background: #888;
     border-radius: 6px;
@@ -85,14 +135,108 @@ input, select {
 .navbar {
   z-index: 1;
   background-color: $black;
-  padding: 0px !important;
-  margin-top: 0px;
+  padding: 0 !important;
+  margin-top: 0;
   width: 100%;
-
+  
   &-toggler {
-    &:focus {
-      outline: none;
-      box-shadow: none;
+    padding: 0;
+    display: none;
+    @include button-reset;
+    
+    .navbar-toggler-icon {
+      @include flex-center;
+      width: 24px;
+      height: 24px;
+    }
+    
+    @media (max-width: $tablet) {
+      display: block;
+    }
+    
+    @media (min-width: $tablet) {
+      display: none;
+    }
+    
+    .navbar_mob {
+      display: none;
+      position: absolute;
+      top: 110%;
+      box-shadow: $box-shadow;
+      right: 10px;
+      background-color: $white;
+      color: $dark-green;
+      z-index: 5;
+      font-size: $font-sm;
+      width: 300px;
+      transition: opacity 1s ease;
+      
+      ul {
+        padding: 0;
+        margin: 0;
+        
+        li {
+          a {
+            display: block;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            color: $primary-green;
+            text-decoration: none;
+            font-size: $font-md;
+          }
+          
+          &.active {
+            border-bottom: 2px solid $white;
+            
+            a {
+              color: $white;
+            }
+          }
+        }
+      }
+      
+      .navbar_links_mob {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        font-size: $font-md;
+        gap: 0;
+        
+        .navbar_link {
+          text-align: start;
+          display: flex;
+          flex-direction: column;
+          padding: 0 $spacing-lg;
+          width: 100%;
+          
+          .navbar_link_head {
+            margin: 15px 0;
+            @include flex-between;
+            width: 100%;
+            height: 24px;
+            
+            a {
+              @include flex-center;
+              font-weight: 550;
+              color: $dark-green;
+              padding: 0;
+              text-align: center;
+            }
+          }
+          
+          .navbar_link_body {
+            margin: 15px 0 15px $spacing-lg;
+            height: 25px;
+            font-weight: 550;
+            color: $dark-green;
+            padding: 0;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+          }
+        }
+      }
     }
   }
 }
@@ -101,234 +245,418 @@ input, select {
   background-image: url(../Assets/header\ pattern\ svg.svg);
   width: 100%;
   z-index: -1;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
+  @include flex-between;
+  
+  .collapse {
+    background-color: $white;
+  }
 }
 
 .content {
   display: flex;
   flex-direction: row;
-  gap: 28px;
+  gap: $spacing-xxxl;
 }
 
 .headerContet {
   display: flex;
   flex-direction: row;
   text-decoration: none;
-  gap: 28px;
+  gap: $spacing-xxxl;
   align-items: center;
-
+  
   a {
     text-decoration: none;
     color: $primary-green;
     padding: 10px 4px;
-
+    
     &:hover {
       text-decoration: none;
       color: $primary-green;
     }
+    
+    &.active {
+      color: $white !important;
+      border-bottom: 2px solid $white;
+    }
   }
-}
-
-.headerContetMob {
-  display: none;
-  text-decoration: none;
 }
 
 .HeaderIcons {
   display: flex;
   flex-direction: row;
-  gap: 28px;
+  gap: $spacing-xxxl;
   align-self: center;
-  margin-right: 28px;
+  margin-right: $spacing-xxxl;
 }
 
 .header_logo {
-  padding-left: 20px;
-}
-
-.activeTog {
-  border-bottom: 4px solid #222222;
-}
-
-.active {
-  color: $white !important;
-  border-bottom: 2px solid $white;
+  padding-left: $spacing-xl;
 }
 
 .rel {
   position: relative;
 }
 
-.line {
-  border: 1px solid #0000001f;
-  opacity: 1;
-  height: 24px;
-}
-
-.devider {
-  border: 1px solid $light-gray;
-}
-
 .iconTop {
   @include flex-center;
   position: absolute;
-  right: 0px;
-  top: 0px;
+  right: 0;
+  top: 0;
   border-radius: 50%;
   background: $primary-blue;
   height: 12px;
   width: 12px;
-  font-size: 10px;
-}
-
-.profileTop {
-  background: $white;
+  font-size: $font-xs;
+  color: $white;
+  padding: 4px;
+  
+  &.profileTop {
+    background: $white;
+    color: $black;
+  }
 }
 
 .alertHover {
-  font-size: 12px;
+  font-size: $font-sm;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: $spacing-xs;
   height: 579px;
   width: 315px;
   position: absolute;
   top: 130%;
-  right: 0px;
-  background-color: $light-yellow;
-  box-shadow: 0px 1px 6px #0000003d;
-  border-radius: 0px 0px 2px 2px;
-}
-
-.alertMain {
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid #00000044;
-  gap: 4px;
-  padding: 16px;
-}
-
-.allAlert {
-  overflow-y: auto;
-  scroll-behavior: smooth;
-}
-
-.titleImage {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.title {
-  font-size: 14px !important;
-  @include text-ellipsis(2);
-  line-height: 18px;
-  max-height: 36px;
-  font-weight: 550;
-}
-
-.courseDetails {
-  display: flex;
-  font-display: row;
-  gap: 8px;
-}
-
-.dateTime {
-  color: $medium-gray;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-}
-
-.courseId {
-  color: $medium-gray;
-}
-
-.alertBtn {
-  border: 0px;
-  height: 48px;
-  width: 100%;
-  color: $dark-green;
-}
-
-.showAllBtn {
-  position: sticky;
-  bottom: 0px;
-  background-color: $white;
+  right: 0;
+  background-color: $yellow-bg;
+  box-shadow: $light-shadow;
+  border-radius: 0 0 2px 2px;
+  
+  .allAlert {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+  
+  .alertMain {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid $border-dark;
+    gap: $spacing-xs;
+    padding: $spacing-lg;
+    
+    .titleImage {
+      @include flex-between;
+      gap: $spacing-sm;
+    }
+    
+    .title {
+      font-size: $font-md !important;
+      @include text-ellipsis(2);
+      line-height: 18px;
+      max-height: 36px;
+      font-weight: 550;
+    }
+    
+    .courseDetails {
+      display: flex;
+      flex-direction: row;
+      gap: $spacing-sm;
+      
+      .courseId {
+        color: $text-gray;
+      }
+    }
+    
+    .dateTime {
+      color: $text-gray;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
+  
+  .showAllBtn {
+    position: sticky;
+    bottom: 0;
+    background-color: $white;
+    
+    .alertBtn {
+      @include button-reset;
+      height: 48px;
+      width: 100%;
+      color: $dark-green;
+    }
+  }
 }
 
 .aanouncementHover {
   position: absolute;
   top: 130%;
-  right: 0px;
-  background-color: $light-yellow;
+  right: 0;
+  background-color: $yellow-bg;
   width: 315px;
   height: 582px;
   display: flex;
   flex-direction: column;
+  
+  .allAnc {
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    flex: 1;
+  }
+  
+  .ancMain {
+    flex-direction: column;
+    display: flex;
+    font-size: $font-sm;
+    padding: $spacing-lg;
+    border-bottom: 1px solid $border-dark;
+    gap: $spacing-sm;
+    
+    .nameImage {
+      @include flex-between;
+      
+      img {
+        height: 18px;
+      }
+    }
+    
+    .name {
+      display: flex;
+      flex-direction: row;
+      gap: $spacing-xs;
+      
+      label {
+        color: $text-gray;
+      }
+    }
+    
+    .ancFooter {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+  
+  .ancBtn {
+    display: flex;
+    flex-direction: row;
+    position: sticky;
+    bottom: 0;
+    background-color: $white;
+    align-items: center;
+    
+    button {
+      @include button-reset;
+    }
+    
+    .line {
+      border: 1px solid $border-color;
+    }
+  }
 }
 
-.allAnc {
-  display: flex;
-  flex-direction: column;
-  overflow-y: scroll;
+.image-content {
   flex: 1;
+  padding: $spacing-xxl $spacing-xxl $spacing-md $spacing-xxl;
 }
 
-.ancMain {
+.toggle {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-md;
+  justify-content: space-around;
+  background-color: $light-green;
+  margin-top: 6px;
+  align-items: center;
+  height: 64px;
+  font-weight: 800;
+  font-size: large;
+  margin-bottom: 5px;
+  
+  .courses, .clsses {
+    width: 50%;
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-md;
+    justify-content: center;
+    height: 100%;
+    align-items: center;
+    
+    &.activeTog {
+      border-bottom: 4px solid #222222;
+    }
+
+    p{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  
+  .toggleText {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-md;
+    justify-content: center;
+    
+    .number {
+      font-size: large;
+      font-weight: bold;
+    }
+
+    P{
+      font-weight: 500;
+    }
+  }
+}
+
+.contetnInfo {
+  display: flex;
+  flex-direction: row;
+  gap: 50px;
+  width: 100%;
+  border-bottom: 1px solid $medium-gray;
+  padding-bottom: $spacing-md;
+  justify-content: space-between;
+  margin-top: $spacing-xl;
+}
+
+.sortCourse {
+  display: flex;
+  flex-direction: row;
+  width: 80%;
+  justify-content: flex-end;
+  gap: $spacing-md;
+}
+
+.dropdown {
+  border: 0;
+  border-bottom: 1px solid $medium-gray;
+  padding: 10px 30px 10px 0;
+  font-size: $font-lg;
+  font-weight: 400;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 70%;
+  
+  &-container {
+    position: relative;
+    display: inline-block;
+    width: 20%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: $spacing-lg;
+    
+    @include dropdown-arrow;
+  }
+}
+
+.imgContent {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: 30px;
+  padding: $spacing-xxl;
+}
+
+.card {
+  position: relative;
+  display: flex;
   flex-direction: column;
-  display: flex;
-  font-size: 12px;
-  padding: 16px;
-  border-bottom: 1px solid #00000044;
-  gap: 8px;
-}
-
-.nameImage {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-
-  img {
-    height: 18px;
+  gap: $spacing-md;
+  padding: $spacing-xxl $spacing-xxl $spacing-sm $spacing-xxl;
+  
+  &Content {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-xl;
+  }
+  
+  &Icons {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-md;
+    justify-content: space-between;
+    padding: $font-md;
+    border-top: 1px solid $medium-gray;
+    margin-top: $spacing-md;
+    padding-bottom: 0;
+  }
+  
+  &_text {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-md;
+    font-size: $font-sm;
+    color: $dark-gray;
+    
+    &_green {
+      color: $dark-green;
+    }
+  }
+  
+  &_title {
+    @include flex-between;
+    gap: $spacing-md;
+    font-weight: 600;
+    font-size: $font-xl;
+    
+    p {
+      font-size: $font-xl;
+      font-weight: 600;
+      @include text-ellipsis(2);
+      line-height: 1.4em;
+      max-height: 2.8em;
+    }
+  }
+  
+  &_select {
+    border: 0;
+    border-bottom: 1px solid $medium-gray;
+    padding: 10px 30px 10px 0;
+    font-size: $font-lg;
+    font-weight: 400;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+    
+    &_div {
+      width: 100%;
+      position: relative;
+      display: inline-block;
+      @include flex-center;
+      flex-direction: row;
+      
+      @include dropdown-arrow;
+    }
   }
 }
 
-.name {
+.cardText {
+  width: 100%;
   display: flex;
-  font-display: row;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
 
-  label {
-    color: $medium-gray;
+  .card_text{
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
   }
 }
 
-.ancFooter {
-  display: flex;
-  font-display: row;
-  justify-content: space-between;
-}
-
-.ancBtn {
-  display: flex;
-  flex-direction: row;
-  position: sticky;
-  bottom: 0px;
-  background-color: $white;
-align-items: center;
-background-color: #FFFFFF;
-    button{
-        background-color: transparent;
-    }
-    .line{
-        border: 1px solid #0000001F;
-    }
+.expired {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: $red;
+  background-color: $red-bg;
+  padding: 2px 4px;
+  font-size: $font-sm;
 }
 
 .footer {
@@ -336,8 +664,8 @@ background-color: #FFFFFF;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-
+  gap: $spacing-md;
+  
   img {
     width: 90px;
     height: 24px;
@@ -347,8 +675,8 @@ background-color: #FFFFFF;
 .aboutUs {
   @include flex-center;
   flex-direction: row;
-  gap: 10px;
-
+  gap: $spacing-md;
+  
   a {
     text-decoration: none;
     color: $dark-green !important;
@@ -360,227 +688,57 @@ background-color: #FFFFFF;
   width: 100%;
   @include flex-center;
   flex-direction: row;
-  background: #e0e1e1;
+  background: $footer-bg;
   height: 40px;
   gap: 15px;
-  color: $text-gray;
+  color: $footer-gray;
 }
 
 .footerContent {
-  font-size: 12px;
+  font-size: $font-sm;
 }
 
-.image-content {
-  flex: 1;
-  padding: 24px 24px 10px 24px;
+.line {
+  border: 1px solid $border-color;
+  opacity: 1;
+  height: 24px;
 }
 
-.toggle {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  justify-content: space-around;
-  background-color: $light-green;
-  margin-top: 6px;
-  align-items: center;
-  height: 50px;
-  font-weight: 800px;
-  font-size: large;
-  margin-bottom: 5px;
+.devider {
+  border: 1px solid $medium-gray;
 }
 
-.courses {
-  width: 50%;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  justify-content: center;
-  align-self: end;
-  padding: 2px;
-}
-
-.toggleText {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  justify-content: center;
-}
-
-.clsses {
-  width: 50%;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  justify-content: center;
-  align-self: end;
-  padding: 2px;
-}
-
-.number {
-  font-size: large;
-  font-weight: bold;
-}
-
-.dropdown {
-  border: 0;
-  border-bottom: 1px solid $light-gray;
-  padding: 10px 30px 10px 0;
-  font-size: 16px;
-  font-weight: 400;
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  cursor: pointer;
-  width: 70%;
-}
-
-.dropdown-container {
-  position: relative;
-  display: inline-block;
-  width: 20%;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  gap: 16px;
-
-  &::after {
-    @include dropdown-arrow;
-  }
-}
-
-.sortCourse {
-  display: flex;
-  flex-direction: row;
-  width: 80%;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.contetnInfo {
-  display: flex;
-  flex-direction: row;
-  gap: 50px;
-  width: 100%;
-  border-bottom: 1px solid $light-gray;
-  padding-bottom: 10px;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-
-.imgContent {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
-  gap: 30px;
-  padding: 24px;
-}
-
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 24px 24px 8px 24px;
-
-  &Content {
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-  }
-
-  &Icons {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    justify-content: space-between;
-    padding: 14px;
-    border-top: 1px solid $light-gray;
-    margin-top: 10px;
-    padding-bottom: 0px;
-  }
-
-  &_text {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    font-size: 12px;
-    color: $dark-gray;
-
-    &_green {
-      color: $dark-green;
-    }
-  }
-
-  &_title {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    justify-content: space-between;
-    font-weight: 600;
-    font-size: 18px;
-
-    p {
-      font-size: 18px;
-      font-weight: 600;
-      @include text-ellipsis(2);
-      line-height: 1.4em;
-      max-height: 2.8em;
-    }
-  }
-
-  &_select {
-    border: 0;
-    border-bottom: 1px solid $light-gray;
-    padding: 10px 30px 10px 0;
-    font-size: 16px;
-    font-weight: 400;
-    appearance: none;
-    -webkit-appearance: none;
-    background: transparent;
-    cursor: pointer;
-    width: 100%;
-
-    &_div {
-      width: 100%;
-      position: relative;
-      display: inline-block;
-      @include flex-center;
-      flex-direction: row;
-
-      &::after {
-        @include dropdown-arrow;
-      }
-    }
-  }
-}
-
-.cardText {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.expired {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  color: $red;
-  background-color: rgba(255, 0, 0, 0.185);
-  padding: 2px 4px;
-  font-size: 12px;
-}
-
-@media (max-width: 992px) {
-  .headerContetMob {
+@media (max-width: $tablet) {
+  .mobHeader {
     display: flex;
     text-decoration: none;
     flex-direction: column;
-    gap: 10px;
+    gap: $spacing-md;
     align-items: flex-start;
     justify-content: center;
   }
   
   .headerContet {
     display: none;
+  }
+  
+  .imgContent {
+    grid-template-columns: 1fr;
+    gap: $spacing-xl;
+  }
+  
+  .HeaderIcons {
+    gap: $spacing-lg;
+    margin-right: $spacing-lg;
+  }
+  
+  .sortCourse {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .contetnInfo {
+    flex-direction: column;
+    gap: $spacing-lg;
   }
 }
