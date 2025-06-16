@@ -139,10 +139,14 @@ input, select {
   margin-top: 0;
   width: 100%;
   
-  &-toggler {
+  .navbar-toggler {
     padding: 0;
     display: none;
     @include button-reset;
+    &:focus{
+      box-shadow: none;
+      outline: none;
+    }
     
     .navbar-toggler-icon {
       @include flex-center;
@@ -242,7 +246,7 @@ input, select {
 }
 
 .mainHeader {
-  background-image: url(../Assets/header\ pattern\ svg.svg);
+  background-image: url("../Assets/header\ pattern\ svg.svg");
   width: 100%;
   z-index: -1;
   @include flex-between;
@@ -319,7 +323,7 @@ input, select {
 
 .alertHover {
   font-size: $font-sm;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: $spacing-xs;
   height: 579px;
@@ -396,7 +400,7 @@ input, select {
   background-color: $yellow-bg;
   width: 315px;
   height: 582px;
-  display: flex;
+  display: none;
   flex-direction: column;
   
   .allAnc {
