@@ -9,11 +9,11 @@ body {
   display: -ms-grid;
   display: grid;
   gap: 5px;
+  -ms-grid-columns: (1fr)[2];
+      grid-template-columns: repeat(2, 1fr);
   height: 100vh;
   background-color: #e0e0e0;
   padding: 5px;
-  grid-template-columns: repeat(2, 1fr);
-  -ms-grid-columns: (1fr)[2];
 }
 
 body .main {

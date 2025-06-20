@@ -4,7 +4,6 @@ class BackgroundManager {
       this.background.className = 'main';
       document.body.appendChild(this.background);
     }
-
     get element() {
       return this.background;
     }
@@ -19,6 +18,15 @@ class BackgroundManager {
   }
 
   class DraggableBox {
+    /**
+     * 
+     * @param {*class} parentDiv parent classs
+     * @param {*class} boundsProvider background color
+     * @param {*string} color child div color
+     * @param {*number} top child div top position
+     * @param {*number} left child div left position
+     */
+    
     constructor(parentDiv, boundsProvider, color = 'tomato', top = '0px', left = '0px') {
       this.box = document.createElement('div');
       this.box.className = 'childDiv';
@@ -78,8 +86,8 @@ class BackgroundManager {
   
   for (let i = 0; i < 4; i++) {
     const background = new BackgroundManager();
-    new DraggableBox(background.element, background, 'tomato', '50px', '50px');
-    new DraggableBox(background.element, background, 'yellow', '100px', '100px');
-    new DraggableBox(background.element, background, 'lime', '150px', '150px');
-    new DraggableBox(background.element, background, 'blue', '200px', '200px');
+    new DraggableBox(background.element, background, 'tomato', '50px', '100px');
+    new DraggableBox(background.element, background, 'yellow', '50px', '150px');
+    new DraggableBox(background.element, background, 'lime', '100px', '100px');
+    new DraggableBox(background.element, background, 'blue', '100px', '150px');
   }

@@ -42,7 +42,7 @@ class BackgroundManager {
     }
   
     randomVelocity() {
-      return Math.random() * 14 - 7;
+      return Math.random() * 15;
     }
   
     attachEvents() {

@@ -1,0 +1,22 @@
+* {
+  margin: 0px;
+  padding: 0px;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body .main {
+  width: 100vw;
+  height: 100vh;
+  overflow: scroll;
+}
+
+body .main .canvas {
+  display: -ms-grid;
+  display: grid;
+}
+/*# sourceMappingURL=style.css.map */
