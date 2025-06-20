@@ -1,6 +1,11 @@
-* {
-    margin: 0px;
-    padding: 0px;
+h1,
+h2,
+p,
+li,
+ul,
+img {
+    margin: 0;
+    padding: 0;
 }
 
 body {
@@ -11,10 +16,51 @@ body {
     .main {
         width: 100vw;
         height: 100vh;
-        overflow: scroll;
+        display: flex;
+        flex-direction: column;
 
-        .canvas {
-            display: grid;
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: white;
+            padding: 2px;
+            width: 100%;
+            img {
+                height: 20px;
+                padding: 10px;
+            }
+        }
+
+        .content {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+
+            .virtualContainer {
+                padding: 10px;
+              }
+
+            .canvas {
+                position: fixed;
+                top: 60px;
+                left: 6px;
+                background-color: white;
+                pointer-events: none;
+            }
+        }
+
+        .footer {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            background-color: white;
+            padding: 2px;
+            width: 100%;
+            img {
+                height: 20px;
+                padding: 10px;
+            }
         }
     }
 }

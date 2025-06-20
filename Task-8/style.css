@@ -1,6 +1,11 @@
-* {
-  margin: 0px;
-  padding: 0px;
+h1,
+h2,
+p,
+li,
+ul,
+img {
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -12,11 +17,62 @@ body {
 body .main {
   width: 100vw;
   height: 100vh;
-  overflow: scroll;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
 }
 
-body .main .canvas {
-  display: -ms-grid;
-  display: grid;
+body .main .header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: white;
+  padding: 2px;
+  width: 100%;
+}
+
+body .main .header img {
+  height: 20px;
+  padding: 10px;
+}
+
+body .main .content {
+  -webkit-box-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  position: relative;
+  overflow: auto;
+}
+
+body .main .content .virtualContainer {
+  padding: 10px;
+}
+
+body .main .content .canvas {
+  position: fixed;
+  top: 60px;
+  left: 6px;
+  background-color: white;
+  pointer-events: none;
+}
+
+body .main .footer {
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background-color: white;
+  padding: 2px;
+  width: 100%;
+}
+
+body .main .footer img {
+  height: 20px;
+  padding: 10px;
 }
 /*# sourceMappingURL=style.css.map */
