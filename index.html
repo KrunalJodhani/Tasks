@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task-8 Excel</title>
+    <style>
+        h1,
+        h2,
+        p,
+        li,
+        ul,
+        img {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .main {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: white;
+            padding: 2px;
+            width: 100%;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .header img {
+            height: 20px;
+            padding: 10px;
+        }
+
+        .content {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+        }
+
+        .virtualContainer {
+            padding: 10px;
+        }
+
+        .canvas {
+            position: fixed;
+            top: 60px;
+            left: 6px;
+            background-color: white;
+            pointer-events: auto;
+            cursor: cell;
+        }
+
+        .cell-input {
+            position: absolute;
+            border: 2px solid #4285f4;
+            box-sizing: border-box;
+            font-size: 12px;
+            padding: 0 4px;
+            margin: 0;
+            z-index: 100;
+            background-color: #fff;
+            outline: none;
+            font-family: Arial, sans-serif;
+        }
+
+        .footer {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            background-color: white;
+            padding: 2px;
+            width: 100%;
+            border-top: 1px solid #ccc;
+        }
+
+        .footer img {
+            height: 20px;
+            padding: 10px;
+        }
+
+        .selected-cell {
+            border: 2px solid #4285f4;
+            background-color: rgba(66, 133, 244, 0.1);
+        }
+
+        .stats-panel {
+            position: fixed;
+            bottom: 60px;
+            right: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 12px;
+            z-index: 200;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <div style="width: 20px; height: 20px; background: #1e7e34; margin: 10px;"></div>
+                <span style="font-weight: bold; color: #1e7e34;">Excel Grid</span>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <div class="virtualContainer"></div>
+            <canvas id="mainExcel" class="canvas"></canvas>
+        </div>
+
+        <div class="stats-panel" id="statsPanel">
+            <div>Count: <span id="statCount">0</span></div>
+            <div>Sum: <span id="statSum">0</span></div>
+            <div>Average: <span id="statAvg">0</span></div>
+            <div>Min: <span id="statMin">0</span></div>
+            <div>Max: <span id="statMax">0</span></div>
+        </div>
+
+        <div class="footer">
+            <div style="display: flex; align-items: center;">
+                <div style="width: 20px; height: 20px; background: #1e7e34; margin: 10px;"></div>
+                <span style="font-size: 12px;">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CellData {
+            constructor() {
+                this.data = new Map();
+            }
+
+            setCellValue(row, col, value) {
+                const key = `${row}_${col}`;
+                this.data.set(key, value);
+            }
+
+            getCellValue(row, col) {
+                const key = `${row}_${col}`;
+                return this.data.get(key) || '';
+            }
+
+            loadJsonData(jsonData) {
+                jsonData.forEach((record, index) => {
+                    if (index < 100000) {
+                        this.setCellValue(index + 1, 0, record.id || '');
+                        this.setCellValue(index + 1, 1, record.firstName || '');
+                        this.setCellValue(index + 1, 2, record.lastName || '');
+                        this.setCellValue(index + 1, 3, record.age || '');
+                        this.setCellValue(index + 1, 4, record.salary || '');
+                    }
+                });
+                
+                this.setCellValue(0, 0, 'ID');
+                this.setCellValue(0, 1, 'First Name');
+                this.setCellValue(0, 2, 'Last Name');
+                this.setCellValue(0, 3, 'Age');
+                this.setCellValue(0, 4, 'Salary');
+            }
+        }
+
+        class SelectionManager {
+            constructor() {
+                this.selectedCells = new Set();
+                this.startCell = null;
+                this.endCell = null;
+                this.isSelecting = false;
+            }
+
+            startSelection(row, col) {
+                this.clearSelection();
+                this.startCell = { row, col };
+                this.endCell = { row, col };
+                this.isSelecting = true;
+                this.updateSelection();
+            }
+
+            updateSelection(row, col) {
+                if (this.isSelecting && row !== undefined && col !== undefined) {
+                    this.endCell = { row, col };
+                    this.updateSelectedCells();
+                }
+            }
+
+            updateSelectedCells() {
+                this.selectedCells.clear();
+                
+                if (!this.startCell || !this.endCell) return;
+
+                const minRow = Math.min(this.startCell.row, this.endCell.row);
+                const maxRow = Math.max(this.startCell.row, this.endCell.row);
+                const minCol = Math.min(this.startCell.col, this.endCell.col);
+                const maxCol = Math.max(this.startCell.col, this.endCell.col);
+
+                for (let r = minRow; r <= maxRow; r++) {
+                    for (let c = minCol; c <= maxCol; c++) {
+                        this.selectedCells.add(`${r}_${c}`);
+                    }
+                }
+            }
+
+            endSelection() {
+                this.isSelecting = false;
+            }
+
+            clearSelection() {
+                this.selectedCells.clear();
+                this.startCell = null;
+                this.endCell = null;
+                this.isSelecting = false;
+            }
+
+            isSelected(row, col) {
+                return this.selectedCells.has(`${row}_${col}`);
+            }
+
+            getSelectedValues(cellData) {
+                const values = [];
+                this.selectedCells.forEach(cellKey => {
+                    const [row, col] = cellKey.split('_').map(Number);
+                    const value = cellData.getCellValue(row, col);
+                    if (value !== '' && !isNaN(value)) {
+                        values.push(parseFloat(value));
+                    }
+                });
+                return values;
+            }
+        }
+
+        class StatsCalculator {
+            static calculate(values) {
+                if (values.length === 0) {
+                    return { count: 0, sum: 0, avg: 0, min: 0, max: 0 };
+                }
+
+                const count = values.length;
+                const sum = values.reduce((a, b) => a + b, 0);
+                const avg = sum / count;
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+
+                return { count, sum, avg: Math.round(avg * 100) / 100, min, max };
+            }
+
+            static updateStatsPanel(stats) {
+                document.getElementById('statCount').textContent = stats.count;
+                document.getElementById('statSum').textContent = stats.sum;
+                document.getElementById('statAvg').textContent = stats.avg;
+                document.getElementById('statMin').textContent = stats.min;
+                document.getElementById('statMax').textContent = stats.max;
+                
+                const panel = document.getElementById('statsPanel');
+                panel.style.display = stats.count > 0 ? 'block' : 'none';
+            }
+        }
+
+        class EditCommand {
+            constructor(cellData, row, col, oldValue, newValue) {
+                this.cellData = cellData;
+                this.row = row;
+                this.col = col;
+                this.oldValue = oldValue;
+                this.newValue = newValue;
+            }
+
+            execute() {
+                this.cellData.setCellValue(this.row, this.col, this.newValue);
+            }
+
+            undo() {
+                this.cellData.setCellValue(this.row, this.col, this.oldValue);
+            }
+        }
+
+        class CommandManager {
+            constructor() {
+                this.history = [];
+                this.currentIndex = -1;
+            }
+
+            execute(command) {
+                this.history = this.history.slice(0, this.currentIndex + 1);
+                this.history.push(command);
+                this.currentIndex++;
+                command.execute();
+            }
+
+            undo() {
+                if (this.currentIndex >= 0) {
+                    const command = this.history[this.currentIndex];
+                    command.undo();
+                    this.currentIndex--;
+                }
+            }
+
+            redo() {
+                if (this.currentIndex < this.history.length - 1) {
+                    this.currentIndex++;
+                    const command = this.history[this.currentIndex];
+                    command.execute();
+                }
+            }
+        }
+
+        class Row {
+            constructor(index, height = 30) {
+                this.index = index;
+                this.height = height;
+                this.top = index * height;
+            }
+
+            getTop() {
+                return this.top;
+            }
+
+            getHeight() {
+                return this.height;
+            }
+        }
+
+        class Column {
+            constructor(index, width = 80) {
+                this.index = index;
+                this.width = width;
+                this.left = index * width;
+            }
+
+            getLeft() {
+                return this.left;
+            }
+
+            getWidth() {
+                return this.width;
+            }
+        }
+
+        class Grid {
+            constructor(ctx, rowHeight, colWidth, totalRows, totalCols, cellData, selectionManager) {
+                this.ctx = ctx;
+                this.rowHeight = rowHeight;
+                this.colWidth = colWidth;
+                this.totalRows = totalRows;
+                this.totalCols = totalCols;
+                this.cellData = cellData;
+                this.selectionManager = selectionManager;
+            }
+
+            render(scrollTop, scrollLeft, canvasWidth, canvasHeight) {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                
+                const startRow = Math.floor(scrollTop / this.rowHeight);
+                const endRow = Math.min(startRow + Math.ceil(canvasHeight / this.rowHeight) + 1, this.totalRows);
+
+                const startCol = Math.floor(scrollLeft / this.colWidth);
+                const endCol = Math.min(startCol + Math.ceil(canvasWidth / this.colWidth) + 1, this.totalCols);
+
+                for (let r = startRow; r < endRow; r++) {
+                    for (let c = startCol; c < endCol; c++) {
+                        const x = c * this.colWidth - scrollLeft;
+                        const y = r * this.rowHeight - scrollTop;
+
+                        if (this.selectionManager.isSelected(r, c)) {
+                            ctx.fillStyle = 'rgba(66, 133, 244, 0.2)';
+                            ctx.fillRect(x, y, this.colWidth, this.rowHeight);
+                        }
+
+                        ctx.strokeStyle = "#ddd";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x, y, this.colWidth, this.rowHeight);
+
+                        const cellValue = this.cellData.getCellValue(r, c);
+                        if (cellValue) {
+                            ctx.fillStyle = "#000";
+                            ctx.font = "12px Arial";
+                            ctx.textAlign = "left";
+                            ctx.textBaseline = "middle";
+                            
+                            const text = cellValue.toString();
+                            const maxWidth = this.colWidth - 8;
+                            const truncated = this.truncateText(ctx, text, maxWidth);
+                            
+                            ctx.fillText(truncated, x + 4, y + this.rowHeight / 2);
+                        }
+                    }
+                }
+            }
+
+            truncateText(ctx, text, maxWidth) {
+                if (ctx.measureText(text).width <= maxWidth) {
+                    return text;
+                }
+                
+                while (text.length > 0 && ctx.measureText(text + '...').width > maxWidth) {
+                    text = text.slice(0, -1);
+                }
+                return text + '...';
+            }
+        }
+
+        class Cell {
+            static createInput(x, y, width, height, container, initialValue, onSave) {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "cell-input";
+                input.style.left = `${x}px`;
+                input.style.top = `${y}px`;
+                input.style.width = `${width - 4}px`;
+                input.style.height = `${height - 4}px`;
+                input.value = initialValue || '';
+
+                container.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const value = input.value;
+                    container.removeChild(input);
+                    if (onSave) {
+                        onSave(value);
+                    }
+                };
+
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        save();
+                    } else if (e.key === "Escape") {
+                        container.removeChild(input);
+                    }
+                });
+
+                return input;
+            }
+        }
+
+        class DataGenerator {
+            static generateSampleData(count = 50000) {
+                const firstNames = ['John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
+                const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+                
+                const data = [];
+                for (let i = 1; i <= count; i++) {
+                    data.push({
+                        id: i,
+                        firstName: firstNames[Math.floor(Math.random() * firstNames.length)],
+                        lastName: lastNames[Math.floor(Math.random() * lastNames.length)],
+                        age: Math.floor(Math.random() * 60) + 18,
+                        salary: Math.floor(Math.random() * 150000) + 30000
+                    });
+                }
+                return data;
+            }
+        }
+
+        class SheetManager {
+            constructor(canvas, contentContainer, virtualContainer) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext("2d");
+                this.content = contentContainer;
+                this.virtual = virtualContainer;
+
+                this.rowHeight = 30;
+                this.colWidth = 100;
+                this.totalRows = 100000;
+                this.totalCols = 500;
+
+                this.cellData = new CellData();
+                this.selectionManager = new SelectionManager();
+                this.commandManager = new CommandManager();
+                
+                this.grid = new Grid(
+                    this.ctx, 
+                    this.rowHeight, 
+                    this.colWidth, 
+                    this.totalRows, 
+                    this.totalCols, 
+                    this.cellData,
+                    this.selectionManager
+                );
+
+                this.isMouseDown = false;
+                this.currentEditingCell = null;
+            }
+
+            init() {
+                this.loadSampleData();
+                this.setVirtualSize();
+                this.setCanvasSize();
+                this.attachEventHandlers();
+                this.render();
+            }
+
+            loadSampleData() {
+                const sampleData = DataGenerator.generateSampleData(50000);
+                this.cellData.loadJsonData(sampleData);
+            }
+
+            setVirtualSize() {
+                this.virtual.style.width = this.colWidth * this.totalCols + "px";
+                this.virtual.style.height = this.rowHeight * this.totalRows + "px";
+            }
+
+            setCanvasSize() {
+                this.canvas.width = this.content.clientWidth;
+                this.canvas.height = this.content.clientHeight;
+                this.canvas.style.width = this.canvas.width + "px";
+                this.canvas.style.height = this.canvas.height + "px";
+            }
+
+            render() {
+                const scrollTop = this.content.scrollTop;
+                const scrollLeft = this.content.scrollLeft;
+                this.grid.render(scrollTop, scrollLeft, this.canvas.width, this.canvas.height);
+                
+                const selectedValues = this.selectionManager.getSelectedValues(this.cellData);
+                const stats = StatsCalculator.calculate(selectedValues);
+                StatsCalculator.updateStatsPanel(stats);
+            }
+
+            attachEventHandlers() {
+                this.content.addEventListener("scroll", () => this.render());
+
+                window.addEventListener("resize", () => {
+                    this.setCanvasSize();
+                    this.render();
+                });
+
+                this.canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener("mouseup", (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener("dblclick", (e) => this.handleDoubleClick(e));
+
+                document.addEventListener("keydown", (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 'z') {
+                            e.preventDefault();
+                            this.commandManager.undo();
+                            this.render();
+                        } else if (e.key === 'y') {
+                            e.preventDefault();
+                            this.commandManager.redo();
+                            this.render();
+                        }
+                    }
+                });
+            }
+
+            getCellFromEvent(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scrollLeft = this.content.scrollLeft;
+                const scrollTop = this.content.scrollTop;
+
+                const x = e.clientX - rect.left + scrollLeft;
+                const y = e.clientY - rect.top + scrollTop;
+
+                const col = Math.floor(x / this.colWidth);
+                const row = Math.floor(y / this.rowHeight);
+
+                return { row, col, x, y };
+            }
+
+            handleMouseDown(e) {
+                if (this.currentEditingCell) return;
+                
+                const { row, col } = this.getCellFromEvent(e);
+                
+                if (row >= 0 && col >= 0 && row < this.totalRows && col < this.totalCols) {
+                    this.isMouseDown = true;
+                    this.selectionManager.startSelection(row, col);
+                    this.render();
+                }
+            }
+
+            handleMouseMove(e) {
+                if (!this.isMouseDown || this.currentEditingCell) return;
+                
+                const { row, col } = this.getCellFromEvent(e);
+                
+                if (row >= 0 && col >= 0 && row < this.totalRows && col < this.totalCols) {
+                    this.selectionManager.updateSelection(row, col);
+                    this.render();
+                }
+            }
+
+            handleMouseUp(e) {
+                this.isMouseDown = false;
+                if (this.selectionManager.isSelecting) {
+                    this.selectionManager.endSelection();
+                }
+            }
+
+            handleDoubleClick(e) {
+                const { row, col, x, y } = this.getCellFromEvent(e);
+                
+                if (row >= 0 && col >= 0 && row < this.totalRows && col < this.totalCols) {
+                    this.startEditing(row, col, x, y);
+                }
+            }
+
+            startEditing(row, col, x, y) {
+                if (this.currentEditingCell) return;
+                
+                this.currentEditingCell = { row, col };
+                
+                const scrollLeft = this.content.scrollLeft;
+                const scrollTop = this.content.scrollTop;
+                
+                const inputX = col * this.colWidth - scrollLeft;
+                const inputY = row * this.rowHeight - scrollTop;
+                
+                const currentValue = this.cellData.getCellValue(row, col);
+                
+                Cell.createInput(inputX, inputY, this.colWidth, this.rowHeight, this.content, currentValue, (newValue) => {
+                    const oldValue = this.cellData.getCellValue(row, col);
+                    const command = new EditCommand(this.cellData, row, col, oldValue, newValue);
+                    this.commandManager.execute(command);
+                    this.currentEditingCell = null;
+                    this.render();
+                });
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const canvas = document.getElementById("mainExcel");
+            const content = document.getElementById("content");
+            const virtualContainer = document.querySelector(".virtualContainer");
+
+            const sheet = new SheetManager(canvas, content, virtualContainer);
+            sheet.init();
+        });
+    </script>
+</body>
+</html>
