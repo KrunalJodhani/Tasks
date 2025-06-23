@@ -3,76 +3,233 @@ h2,
 p,
 li,
 ul,
-img {
+img,
+body {
   margin: 0;
   padding: 0;
 }
 
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+* {
+  box-sizing: border-box;
 }
 
-body .main {
+body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.main {
   width: 100vw;
   height: 100vh;
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  flex-direction: column;
 }
 
-body .main .header {
-  position: -webkit-sticky;
+.header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: white;
-  padding: 2px;
+  background: #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  padding: 8px 16px;
   width: 100%;
+  display: flex;
+  align-items: center;
 }
 
-body .main .header img {
-  height: 20px;
-  padding: 10px;
+.header img {
+  height: 24px;
+  margin-right: 12px;
 }
 
-body .main .content {
-  -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+.header .title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+}
+
+.formula-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: rgb(175, 175, 175);
+  border-bottom: 1px solid #dee2e6;
+  gap: 8px;
+}
+
+.cell-reference {
+  min-width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.formula-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 2px;
+  font-size: 12px;
+  font-family: "Courier New", monospace;
+}
+
+.formula-input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+/* .excel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.toolbar-button {
+  padding: 6px 12px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.toolbar-button:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.toolbar-button:active {
+  background: #e9ecef;
+}
+
+.toolbar-button.active {
+  background: #4285f4;
+  color: white;
+  border-color: #4285f4;
+} */
+
+.content {
+  flex: 1;
   position: relative;
   overflow: auto;
+  background-color: #f8f9fa;
+  cursor: auto;
 }
 
-body .main .content .virtualContainer {
-  padding: 10px;
+.virtualContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: cell;
 }
 
-body .main .content .canvas {
+.canvas {
   position: fixed;
-  top: 60px;
-  left: 6px;
+  top: 90px;
+  left: 0;
   background-color: white;
   pointer-events: none;
+  cursor: cell;
+  border: 1px solid #dee2e6;
+  z-index: 1;
+  padding: 5px;
 }
 
-body .main .footer {
-  position: -webkit-sticky;
+.canvas:focus {
+  outline: none;
+}
+
+.cell-input {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: black;
+  background-color: #fff;
+  border: 2px solid #137e43 !important;
+  border-radius: 2px;
+  padding: 4px 8px;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
+  z-index: 100;
+}
+
+.cell-input:focus {
+  border-color: #137e43;
+}
+
+.cell-input::selection {
+  background-color: #4285f4;
+  color: white;
+}
+
+.content::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 6px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.content::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+.footer {
   position: sticky;
   bottom: 0;
   z-index: 10;
-  background-color: white;
-  padding: 2px;
+  background-color: #dee2e6;
+  border-top: 1px solid #dee2e6;
+  padding: 8px 16px;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6c757d;
 }
 
-body .main .footer img {
+.footer img {
   height: 20px;
-  padding: 10px;
+  opacity: 0.7;
 }
-/*# sourceMappingURL=style.css.map */
+
+@media (max-width: 768px) {
+  .header {
+    padding: 4px 8px;
+  }
+
+  .header img {
+    height: 20px;
+  }
+
+  .canvas {
+    top: 100px;
+  }
+
+  .footer {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}

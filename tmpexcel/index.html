@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel-like Spreadsheet with Headers</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div id="cellReference" class="cell-reference">A1</div>
+            <input type="text" id="formulaInput" class="formula-input" placeholder="Enter formula or value">
+            <button id="saveBtn" class="btn">Save</button>
+            <button id="loadBtn" class="btn">Load</button>
+            <div id="cellInfo">A1</div>
+        </div>
+
+        <div class="spreadsheet-container">
+            <div class="headers-container">
+                <div class="corner-header"></div>
+                <div id="colHeaders" class="col-headers"></div>
+                <div id="rowHeaders" class="row-headers"></div>
+            </div>
+
+            <div id="content">
+                <canvas id="mainExcel"></canvas>
+                <div class="virtualContainer"></div>
+            </div>
+        </div>
+    </div>
+    <script src="index.js"></script>
+</body>
+</html>

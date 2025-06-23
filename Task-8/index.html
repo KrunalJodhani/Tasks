@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,21 +8,43 @@
     <title>Task-8 Excel</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="main">
         <div class="header">
-            <img src="/Task-8/assets/excel-logo.svg" alt="excel-logo">
+            <img src="/Task-8/assets/excel-logo.svg" alt="excel-header-logo">
+            <span class="title">Excel Clone</span>
         </div>
 
+        <div class="formula-bar">
+            <div class="cell-reference" id="cellReference">A1</div>
+            <input type="text" class="formula-input" id="formulaInput" placeholder="Enter formula or value...">
+        </div>
+
+        <!-- <div class="excel-toolbar">
+            <button class="toolbar-button" id="boldBtn"><strong>B</strong></button>
+            <button class="toolbar-button" id="italicBtn"><em>I</em></button>
+            <button class="toolbar-button" id="underlineBtn"><u>U</u></button>
+            <div style="border-left: 1px solid #dee2e6; height: 20px; margin: 0 4px;"></div>
+            <button class="toolbar-button" id="leftAlign">⬅</button>
+            <button class="toolbar-button" id="centerAlign">⬛</button>
+            <button class="toolbar-button" id="rightAlign">➡</button>
+            <div style="border-left: 1px solid #dee2e6; height: 20px; margin: 0 4px;"></div>
+            <button class="toolbar-button" id="saveBtn">💾 Save</button>
+            <button class="toolbar-button" id="loadBtn">📁 Load</button>
+        </div> -->
+        
         <div class="content" id="content">
             <div class="virtualContainer"></div>
             <canvas id="mainExcel" class="canvas"></canvas>
         </div>
 
         <div class="footer">
-            <img src="/Task-8/assets/excel-logo.svg" alt="">
+            <img src="/Task-8/assets/excel-logo.svg" alt="excel-footer-logo">
         </div>
     </div>
     <script src="index.js"></script>
 </body>
+
+
 </html>
