@@ -1,235 +1,164 @@
-h1,
-h2,
-p,
-li,
-ul,
-img,
-body {
-  margin: 0;
-  padding: 0;
-}
-
 * {
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    overflow: hidden;
 }
 
-.main {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #dee2e6;
-  border-bottom: 1px solid #dee2e6;
-  padding: 8px 16px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-}
-
-.header img {
-  height: 24px;
-  margin-right: 12px;
-}
-
-.header .title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #212529;
+.container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .formula-bar {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  background: rgb(175, 175, 175);
-  border-bottom: 1px solid #dee2e6;
-  gap: 8px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .cell-reference {
-  min-width: 60px;
-  padding: 4px 8px;
-  border: 1px solid #dee2e6;
-  border-radius: 2px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #f8f9fa;
-  text-align: center;
+    background: white;
+    border: 1px solid #d0d0d0;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
+    border-radius: 3px;
 }
 
 .formula-input {
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid #dee2e6;
-  border-radius: 2px;
-  font-size: 12px;
-  font-family: "Courier New", monospace;
+    flex: 1;
+    border: 1px solid #d0d0d0;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .formula-input:focus {
-  outline: none;
-  border-color: #4285f4;
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
 }
 
-/* .excel-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  background: #fff;
-  border-bottom: 1px solid #dee2e6;
+.header {
+    background-color: rgba(128, 128, 128, 0.438);
 }
 
-.toolbar-button {
-  padding: 6px 12px;
-  border: 1px solid #dee2e6;
-  background: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s ease;
+.header img {
+    height: 25px;
+    margin-left: 10px;
+    padding: 4px;
 }
 
-.toolbar-button:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
+.grid-container {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: white;
 }
 
-.toolbar-button:active {
-  background: #e9ecef;
-}
-
-.toolbar-button.active {
-  background: #4285f4;
-  color: white;
-  border-color: #4285f4;
-} */
-
-.content {
-  flex: 1;
-  position: relative;
-  overflow: auto;
-  background-color: #f8f9fa;
-  cursor: auto;
-}
-
-.virtualContainer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  cursor: cell;
-}
-
-.canvas {
-  position: fixed;
-  top: 90px;
-  left: 0;
-  background-color: white;
-  pointer-events: none;
-  cursor: cell;
-  border: 1px solid #dee2e6;
-  z-index: 1;
-  padding: 5px;
-}
-
-.canvas:focus {
-  outline: none;
+#grid-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: cell;
+    border: none;
+    outline: none;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    padding: 4px;
 }
 
 .cell-input {
-  font-family: inherit;
-  font-size: 12px;
-  line-height: 1.4;
-  color: black;
-  background-color: #fff;
-  border: 2px solid #137e43 !important;
-  border-radius: 2px;
-  padding: 4px 8px;
-  outline: none;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
-  z-index: 100;
+    position: absolute;
+    border: 1px solid #137E43;
+    background: white;
+    font: 13px'Arial';
+    padding: 2px 6px;
+    z-index: 1000;
+    resize: none;
+    /* outline: none; */
+    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); */
 }
 
-.cell-input:focus {
-  border-color: #137e43;
+.scrollbar {
+    position: absolute;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    z-index: 100;
 }
 
-.cell-input::selection {
-  background-color: #4285f4;
-  color: white;
+.scrollbar-horizontal {
+    bottom: 0;
+    left: 0;
+    right: 20px;
 }
 
-.content::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+.scrollbar-vertical {
+    top: 0;
+    right: 0;
+    bottom: 80px;
 }
 
-.content::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.scrollbar-thumb {
+    position: absolute;
+    background: #d0d0d0;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 20px;
+    min-height: 20px;
 }
 
-.content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 6px;
+.scrollbar-thumb:hover {
+    background: #b0b0b0;
 }
 
-.content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+.scrollbar-thumb:active {
+    background: #909090;
 }
 
-.content::-webkit-scrollbar-corner {
-  background: #f1f1f1;
+.scrollbar-corner {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
 }
 
 .footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  background-color: #dee2e6;
-  border-top: 1px solid #dee2e6;
-  padding: 8px 16px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #6c757d;
+    background-color: rgba(128, 128, 128, 0.438);
 }
 
 .footer img {
-  height: 20px;
-  opacity: 0.7;
+    height: 25px;
+    margin-left: 10px;
+    padding: 4px;
 }
 
 @media (max-width: 768px) {
-  .header {
-    padding: 4px 8px;
-  }
-
-  .header img {
-    height: 20px;
-  }
-
-  .canvas {
-    top: 100px;
-  }
-
-  .footer {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
+    .formula-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .cell-reference {
+        align-self: flex-start;
+    }
 }

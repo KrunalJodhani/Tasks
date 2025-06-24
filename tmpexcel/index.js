@@ -1,4 +1,9 @@
 class Row {
+  /**
+   * 
+   * @param {*string} index give index to row 
+   * @param {*number} height height of row or cell
+   */
   constructor(index, height = 30) {
     this.index = index;
     this.height = height;
@@ -15,6 +20,11 @@ class Row {
 }
 
 class Column {
+  /**
+   * 
+   * @param {*string} index column index
+   * @param {*number} width widht of column or cell
+   */
   constructor(index, width = 80) {
     this.index = index;
     this.width = width;
@@ -31,6 +41,15 @@ class Column {
 }
 
 class Grid {
+  /**
+   * 
+   * @param {*object} ctx object of canvas for draw box
+   * @param {*number} rowHeight height of raw
+   * @param {*number} colWidth width of column
+   * @param {*number} totalRows total number of rows
+   * @param {*number} totalCols total number of column
+   * @param {*JSON} cellData JSON data of cell
+   */
   constructor(ctx, rowHeight, colWidth, totalRows, totalCols, cellData) {
     this.ctx = ctx;
     this.rowHeight = rowHeight;
@@ -53,11 +72,19 @@ class Grid {
     return result;
   }
 
+  /**
+   * 
+   * @param {*number} scrollTop top of canvas ease for draw and render screen according to top and left
+   * @param {*number} scrollLeft left of canvas
+   * @param {*number} canvasWidth width of canvas screen
+   * @param {*number} canvasHeight Height of canvas screen
+   * @param {*JSON} selectedCell JSON data of selected cell
+   */
   render(scrollTop, scrollLeft, canvasWidth, canvasHeight, selectedCell = null) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.strokeStyle = "#ddd";
-    ctx.font = "12px Arial";
+    ctx.strokeStyle = "black";
+    ctx.font = "16px Arial";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -88,6 +115,14 @@ class Grid {
         if (cellValue) {
           ctx.fillStyle = "#000";
           ctx.fillText(cellValue, x + 4, y + this.rowHeight / 2);
+        } else {
+          // Display cell reference for empty cells using Excel-style column naming
+          ctx.fillStyle = "gray";
+          ctx.font = "10px Arial";
+          const columnName = this.getColumnName(c);
+          const cellReference = `${columnName}${r + 1}`;
+          ctx.fillText(cellReference, x + 4, y + this.rowHeight / 2);
+          ctx.font = "16px Arial";
         }
       }
     }
@@ -95,7 +130,19 @@ class Grid {
 }
 
 class Cell {
+  /**
+   * 
+   * @param {*number} x top pixle of cell
+   * @param {*number} y left pixle of cell
+   * @param {*number} width widht of cell
+   * @param {*number} height height of cell
+   * @param {*class} container class for find cell
+   * @param {*JSON} initialValue cell instial value
+   * @param {*boolean} onSave boolean for save the enter data
+   * @returns 
+   */
   static createInput(x, y, width, height, container, initialValue = "", onSave = null) {
+    // Remove any existing input
     const existingInput = container.querySelector(".cell-input");
     if (existingInput) {
       existingInput.remove();
@@ -108,8 +155,8 @@ class Cell {
     input.style.position = "absolute";
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
-    input.style.width = `${width - 2}px`;
-    input.style.height = `${height - 2}px`;
+    input.style.width = `${width -2}px`;
+    input.style.height = `${height -2}px`;
 
     container.appendChild(input);
     input.focus();
@@ -143,85 +190,156 @@ class Cell {
   }
 }
 
-class HeaderManager {
-  constructor(sheetManager) {
-    this.sheet = sheetManager;
-    this.colHeadersContainer = document.getElementById('colHeaders');
-    this.rowHeadersContainer = document.getElementById('rowHeaders');
-    this.headerHeight = 25;
-    this.headerWidth = 50;
+// Command Pattern Implementation
+class Command {
+  constructor() {
+    if (this.constructor === Command) {
+      throw new Error("Command is an abstract class");
+    }
   }
 
-  createHeaders() {
-    this.updateHeaders();
+  execute() {
+    throw new Error("Execute method must be implemented");
   }
 
-  updateHeaders() {
-    const scrollTop = this.sheet.content.scrollTop;
-    const scrollLeft = this.sheet.content.scrollLeft;
-    const canvasWidth = this.sheet.canvas.width;
-    const canvasHeight = this.sheet.canvas.height;
+  undo() {
+    throw new Error("Undo method must be implemented");
+  }
 
-    // Clear existing headers
-    this.colHeadersContainer.innerHTML = '';
-    this.rowHeadersContainer.innerHTML = '';
+  getDescription() {
+    return "Command";
+  }
+}
 
-    // Create column headers
-    const startCol = Math.floor(scrollLeft / this.sheet.colWidth);
-    const endCol = Math.min(startCol + Math.ceil(canvasWidth / this.sheet.colWidth) + 1, this.sheet.totalCols);
+class SetCellValueCommand extends Command {
+  constructor(sheetManager, row, col, newValue, oldValue) {
+    super();
+    this.sheetManager = sheetManager;
+    this.row = row;
+    this.col = col;
+    this.newValue = newValue;
+    this.oldValue = oldValue;
+  }
 
-    for (let c = startCol; c < endCol; c++) {
-      const colHeader = document.createElement('div');
-      colHeader.className = 'col-header';
-      colHeader.style.left = `${50 + c * this.sheet.colWidth - scrollLeft}px`;
-      colHeader.style.top = '0px';
-      colHeader.style.width = `${this.sheet.colWidth}px`;
-      colHeader.style.height = `${this.headerHeight}px`;
+  execute() {
+    this.sheetManager.setCellValueDirect(this.row, this.col, this.newValue);
+  }
 
-      const headerText = document.createElement('div');
-      headerText.className = 'header-text';
-      headerText.textContent = this.sheet.getColumnName(c);
-      colHeader.appendChild(headerText);
+  undo() {
+    this.sheetManager.setCellValueDirect(this.row, this.col, this.oldValue);
+  }
 
-      this.colHeadersContainer.appendChild(colHeader);
+  getDescription() {
+    const colName = this.sheetManager.getColumnName(this.col);
+    return `Set ${colName}${this.row + 1} to "${this.newValue}"`;
+  }
+}
+
+class ClearCellCommand extends Command {
+  constructor(sheetManager, row, col, oldValue) {
+    super();
+    this.sheetManager = sheetManager;
+    this.row = row;
+    this.col = col;
+    this.oldValue = oldValue;
+  }
+
+  execute() {
+    this.sheetManager.setCellValueDirect(this.row, this.col, "");
+  }
+
+  undo() {
+    this.sheetManager.setCellValueDirect(this.row, this.col, this.oldValue);
+  }
+
+  getDescription() {
+    const colName = this.sheetManager.getColumnName(this.col);
+    return `Clear ${colName}${this.row + 1}`;
+  }
+}
+
+class CommandManager {
+  constructor() {
+    this.undoStack = [];
+    this.redoStack = [];
+    this.maxHistorySize = 100;
+  }
+
+  executeCommand(command) {
+    command.execute();
+    this.undoStack.push(command);
+    
+    // Clear redo stack when new command is executed
+    this.redoStack = [];
+    
+    // Limit history size
+    if (this.undoStack.length > this.maxHistorySize) {
+      this.undoStack.shift();
     }
+  }
 
-    // Create row headers
-    const startRow = Math.floor(scrollTop / this.sheet.rowHeight);
-    const endRow = Math.min(startRow + Math.ceil(canvasHeight / this.sheet.rowHeight) + 1, this.sheet.totalRows);
-
-    for (let r = startRow; r < endRow; r++) {
-      const rowHeader = document.createElement('div');
-      rowHeader.className = 'row-header';
-      rowHeader.style.left = '0px';
-      rowHeader.style.top = `${25 + r * this.sheet.rowHeight - scrollTop}px`;
-      rowHeader.style.width = `${this.headerWidth}px`;
-      rowHeader.style.height = `${this.sheet.rowHeight}px`;
-
-      const headerText = document.createElement('div');
-      headerText.className = 'header-text';
-      headerText.textContent = (r + 1).toString();
-      rowHeader.appendChild(headerText);
-
-      this.rowHeadersContainer.appendChild(rowHeader);
+  undo() {
+    if (this.undoStack.length > 0) {
+      const command = this.undoStack.pop();
+      command.undo();
+      this.redoStack.push(command);
+      return true;
     }
+    return false;
+  }
+
+  redo() {
+    if (this.redoStack.length > 0) {
+      const command = this.redoStack.pop();
+      command.execute();
+      this.undoStack.push(command);
+      return true;
+    }
+    return false;
+  }
+
+  canUndo() {
+    return this.undoStack.length > 0;
+  }
+
+  canRedo() {
+    return this.redoStack.length > 0;
+  }
+
+  getLastCommand() {
+    return this.undoStack.length > 0 ? this.undoStack[this.undoStack.length - 1] : null;
+  }
+
+  clear() {
+    this.undoStack = [];
+    this.redoStack = [];
   }
 }
 
 class SheetManager {
+  /**
+   * 
+   * @param {*object} canvas object of canvas
+   * @param {*div/class} contentContainer main div for render data
+* @param {*div/classs} virtualContainer div wich dynamically render cell and draw according to scroll
+   */
   constructor(canvas, contentContainer, virtualContainer) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.content = contentContainer;
     this.virtual = virtualContainer;
 
-    this.rowHeight = 30;
-    this.colWidth = 80;
+    this.rowHeight = 40;
+    this.colWidth = 100;
     this.totalRows = 100000;
-    this.totalCols = 500;
+    this.totalCols = 1000;
 
     this.cellData = {};
     this.selectedCell = { row: 0, col: 0 };
+    this.copiedCell = null; // For copy/paste functionality
+
+    // Initialize command manager
+    this.commandManager = new CommandManager();
 
     this.grid = new Grid(
       this.ctx,
@@ -231,8 +349,6 @@ class SheetManager {
       this.totalCols,
       this.cellData
     );
-
-    this.headerManager = new HeaderManager(this);
   }
 
   init() {
@@ -242,7 +358,6 @@ class SheetManager {
     this.attachEditHandler();
     this.attachClickHandler();
     this.attachKeyboardHandler();
-    this.headerManager.createHeaders();
     this.render();
     this.updateUI();
   }
@@ -263,7 +378,6 @@ class SheetManager {
     const scrollTop = this.content.scrollTop;
     const scrollLeft = this.content.scrollLeft;
     this.grid.render(scrollTop, scrollLeft, this.canvas.width, this.canvas.height, this.selectedCell);
-    this.headerManager.updateHeaders();
   }
 
   getColumnName(colIndex) {
@@ -285,6 +399,7 @@ class SheetManager {
     const cellInfo = document.getElementById('cellInfo');
 
     if (this.selectedCell) {
+      // Use the new column naming method for 500 columns
       const cellRef = `${this.getColumnName(this.selectedCell.col)}${this.selectedCell.row + 1}`;
       if (cellReference) cellReference.textContent = cellRef;
 
@@ -292,6 +407,26 @@ class SheetManager {
       const cellValue = this.cellData[cellKey] || '';
       if (formulaInput) formulaInput.value = cellValue;
       if (cellInfo) cellInfo.textContent = cellRef;
+    }
+
+    // Update undo/redo button states (if they exist)
+    this.updateCommandButtons();
+  }
+
+  updateCommandButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    if (undoBtn) {
+      undoBtn.disabled = !this.commandManager.canUndo();
+      undoBtn.title = this.commandManager.canUndo() ? 
+        `Undo: ${this.commandManager.getLastCommand()?.getDescription()}` : 
+        'Nothing to undo';
+    }
+    
+    if (redoBtn) {
+      redoBtn.disabled = !this.commandManager.canRedo();
+      redoBtn.title = this.commandManager.canRedo() ? 'Redo last action' : 'Nothing to redo';
     }
   }
 
@@ -321,7 +456,7 @@ class SheetManager {
   }
 
   attachClickHandler() {
-    this.canvas.addEventListener("click", (e) => {
+    this.content.addEventListener("click", (e) => {
       const cellInfo = this.getCellFromCoordinates(e.clientX, e.clientY);
 
       if (cellInfo.row >= 0 && cellInfo.row < this.totalRows &&
@@ -334,42 +469,86 @@ class SheetManager {
   }
 
   attachEditHandler() {
-    this.canvas.addEventListener("dblclick", (e) => {
+    this.content.addEventListener("dblclick", (e) => {
       const cellInfo = this.getCellFromCoordinates(e.clientX, e.clientY);
       const { row, col } = cellInfo;
 
       if (row >= 0 && row < this.totalRows && col >= 0 && col < this.totalCols) {
-        const inputX = col * this.colWidth - this.content.scrollLeft;
-        const inputY = row * this.rowHeight - this.content.scrollTop;
-
-        const cellKey = `${row}-${col}`;
-        const currentValue = this.cellData[cellKey] || "";
-
-        Cell.createInput(
-          inputX,
-          inputY,
-          this.colWidth,
-          this.rowHeight,
-          this.content,
-          currentValue,
-          (newValue) => {
-            if (newValue) {
-              this.cellData[cellKey] = newValue;
-            } else {
-              delete this.cellData[cellKey];
-            }
-
-            this.selectedCell = { row, col };
-            this.render();
-            this.updateUI();
-          }
-        );
+        this.startEditCell(row, col);
       }
     });
   }
 
+  startEditCell(row, col) {
+    const inputX = col * this.colWidth - this.content.scrollLeft;
+    const inputY = row * this.rowHeight - this.content.scrollTop;
+
+    const cellKey = `${row}-${col}`;
+    const currentValue = this.cellData[cellKey] || "";
+
+    Cell.createInput(
+      inputX,
+      inputY,
+      this.colWidth,
+      this.rowHeight,
+      this.content,
+      currentValue,
+      (newValue) => {
+        this.setCellValue(row, col, newValue);
+        this.selectedCell = { row, col };
+      }
+    );
+  }
+
   attachKeyboardHandler() {
     document.addEventListener('keydown', (e) => {
+      // Don't handle shortcuts when typing in inputs
+      if (document.activeElement.tagName === 'INPUT' && !e.ctrlKey && !e.metaKey) return;
+
+      // Handle Ctrl/Cmd combinations
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'z':
+            e.preventDefault();
+            if (e.shiftKey) {
+              this.redo();
+            } else {
+              this.undo();
+            }
+            break;
+          case 'y':
+            e.preventDefault();
+            this.redo();
+            break;
+          case 'c':
+            e.preventDefault();
+            this.copyCell();
+            break;
+          case 'v':
+            e.preventDefault();
+            this.pasteCell();
+            break;
+          case 'x':
+            e.preventDefault();
+            this.cutCell();
+            break;
+          case 's':
+            e.preventDefault();
+            this.saveSpreadsheet();
+            break;
+          case 'o':
+            e.preventDefault();
+            this.openSpreadsheet();
+            break;
+          case 'a':
+            e.preventDefault();
+            this.selectAll();
+            break;
+        }
+        return;
+      }
+
+      // Handle regular navigation keys
       if (document.activeElement.tagName === 'INPUT') return;
 
       const { row, col } = this.selectedCell;
@@ -397,10 +576,51 @@ class SheetManager {
           e.preventDefault();
           this.startEdit();
           break;
+        case 'F2':
+          e.preventDefault();
+          this.startEdit();
+          break;
         case 'Delete':
         case 'Backspace':
           e.preventDefault();
           this.clearCell();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          // Remove any active input
+          const activeInput = this.content.querySelector('.cell-input');
+          if (activeInput) {
+            activeInput.remove();
+          }
+          break;
+        case 'Home':
+          e.preventDefault();
+          if (e.ctrlKey || e.metaKey) {
+            newRow = 0;
+            newCol = 0;
+          } else {
+            newCol = 0;
+          }
+          break;
+        case 'End':
+          e.preventDefault();
+          if (e.ctrlKey || e.metaKey) {
+            // Find last used cell
+            const lastCell = this.findLastUsedCell();
+            newRow = lastCell.row;
+            newCol = lastCell.col;
+          } else {
+            // Find last used column in current row
+            newCol = this.findLastUsedColumnInRow(row);
+          }
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          newRow = Math.max(0, row - 10);
+          break;
+        case 'PageDown':
+          e.preventDefault();
+          newRow = Math.min(this.totalRows - 1, row + 10);
           break;
       }
 
@@ -413,39 +633,96 @@ class SheetManager {
     });
   }
 
+  // Command operations
+  undo() {
+    if (this.commandManager.undo()) {
+      this.render();
+      this.updateUI();
+      console.log('Undo performed');
+    }
+  }
+
+  redo() {
+    if (this.commandManager.redo()) {
+      this.render();
+      this.updateUI();
+      console.log('Redo performed');
+    }
+  }
+
+  // Copy/Paste operations
+  copyCell() {
+    const { row, col } = this.selectedCell;
+    const cellKey = `${row}-${col}`;
+    this.copiedCell = {
+      row,
+      col,
+      value: this.cellData[cellKey] || ""
+    };
+    console.log(`Copied cell ${this.getColumnName(col)}${row + 1}: "${this.copiedCell.value}"`);
+  }
+
+  cutCell() {
+    this.copyCell();
+    this.clearCell();
+  }
+
+  pasteCell() {
+    if (!this.copiedCell) return;
+    
+    const { row, col } = this.selectedCell;
+    this.setCellValue(row, col, this.copiedCell.value);
+    console.log(`Pasted to cell ${this.getColumnName(col)}${row + 1}: "${this.copiedCell.value}"`);
+  }
+
+  selectAll() {
+    // This is a placeholder - you could implement range selection here
+    console.log('Select All - functionality can be extended for range selection');
+  }
+
+  // Helper functions
+  findLastUsedCell() {
+    let maxRow = 0;
+    let maxCol = 0;
+    
+    for (const cellKey in this.cellData) {
+      const [row, col] = cellKey.split('-').map(Number);
+      if (row > maxRow) maxRow = row;
+      if (col > maxCol) maxCol = col;
+    }
+    
+    return { row: maxRow, col: maxCol };
+  }
+
+  findLastUsedColumnInRow(row) {
+    let maxCol = 0;
+    
+    for (const cellKey in this.cellData) {
+      const [cellRow, cellCol] = cellKey.split('-').map(Number);
+      if (cellRow === row && cellCol > maxCol) {
+        maxCol = cellCol;
+      }
+    }
+    
+    return maxCol;
+  }
+
   startEdit() {
     const { row, col } = this.selectedCell;
-    const inputX = col * this.colWidth - this.content.scrollLeft;
-    const inputY = row * this.rowHeight - this.content.scrollTop;
-
-    const cellKey = `${row}-${col}`;
-    const currentValue = this.cellData[cellKey] || "";
-
-    Cell.createInput(
-      inputX,
-      inputY,
-      this.colWidth,
-      this.rowHeight,
-      this.content,
-      currentValue,
-      (newValue) => {
-        if (newValue) {
-          this.cellData[cellKey] = newValue;
-        } else {
-          delete this.cellData[cellKey];
-        }
-        this.render();
-        this.updateUI();
-      }
-    );
+    this.startEditCell(row, col);
   }
 
   clearCell() {
     const { row, col } = this.selectedCell;
     const cellKey = `${row}-${col}`;
-    delete this.cellData[cellKey];
-    this.render();
-    this.updateUI();
+    const oldValue = this.cellData[cellKey] || "";
+    
+    if (oldValue) {
+      const command = new ClearCellCommand(this, row, col, oldValue);
+      this.commandManager.executeCommand(command);
+      this.render();
+      this.updateUI();
+    }
   }
 
   scrollToCell(row, col) {
@@ -475,15 +752,52 @@ class SheetManager {
     return this.cellData[cellKey] || "";
   }
 
-  setCellValue(row, col, value) {
+  // Direct cell value setter (doesn't create command)
+  setCellValueDirect(row, col, value) {
     const cellKey = `${row}-${col}`;
-    if (value) {
-      this.cellData[cellKey] = value;
+    if (value && value.trim()) {
+      this.cellData[cellKey] = value.trim();
     } else {
       delete this.cellData[cellKey];
     }
-    this.render();
-    this.updateUI();
+  }
+
+  // Public cell value setter (creates command)
+  setCellValue(row, col, value) {
+    const cellKey = `${row}-${col}`;
+    const oldValue = this.cellData[cellKey] || "";
+    const newValue = value ? value.trim() : "";
+    
+    if (oldValue !== newValue) {
+      const command = new SetCellValueCommand(this, row, col, newValue, oldValue);
+      this.commandManager.executeCommand(command);
+      this.render();
+      this.updateUI();
+    }
+  }
+
+  saveSpreadsheet() {
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.click();
+    } else {
+      // Fallback save functionality
+      const data = this.exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'spreadsheet.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  openSpreadsheet() {
+    const loadBtn = document.getElementById('loadBtn');
+    if (loadBtn) {
+      loadBtn.click();
+    }
   }
 
   exportData() {
@@ -493,6 +807,7 @@ class SheetManager {
   importData(jsonData) {
     try {
       this.cellData = JSON.parse(jsonData);
+      this.commandManager.clear(); // Clear command history when loading new data
       this.render();
       this.updateUI();
       return true;
@@ -525,6 +840,22 @@ window.addEventListener("DOMContentLoaded", () => {
         this.blur();
         canvas.focus();
       }
+    });
+  }
+
+  // Handle undo/redo buttons (if they exist)
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      sheet.undo();
+    });
+  }
+
+  if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+      sheet.redo();
     });
   }
 
@@ -563,4 +894,8 @@ window.addEventListener("DOMContentLoaded", () => {
       input.click();
     });
   }
+
+  // Focus canvas for keyboard events
+  canvas.setAttribute('tabindex', '0');
+  canvas.focus();
 });

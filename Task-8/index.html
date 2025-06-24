@@ -3,17 +3,63 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task-8 Excel</title>
+    <title>Excel Grid</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="main">
+    <div class="container">
+        <!-- <div class="toolbar">
+            <div class="toolbar-section">
+                <span style="font-weight: bold;">📊 Advanced Excel Grid</span>
+                <span style="font-size: 12px; opacity: 0.8;">100,000 rows × 500 columns</span>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button class="toolbar-button tooltip" id="undoBtn" data-tooltip="Undo (Ctrl+Z)">
+                    ↶ Undo
+                </button>
+                <button class="toolbar-button tooltip" id="redoBtn" data-tooltip="Redo (Ctrl+Y)">
+                    ↷ Redo
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button class="toolbar-button tooltip" id="copyBtn" data-tooltip="Copy (Ctrl+C)">
+                    📋 Copy
+                </button>
+                <button class="toolbar-button tooltip" id="pasteBtn" data-tooltip="Paste (Ctrl+V)">
+                    📄 Paste
+                </button>
+                <button class="toolbar-button tooltip" id="cutBtn" data-tooltip="Cut (Ctrl+X)">
+                    ✂️ Cut
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button class="toolbar-button tooltip" id="saveBtn" data-tooltip="Save (Ctrl+S)">
+                    💾 Save
+                </button>
+                <button class="toolbar-button tooltip" id="loadBtn" data-tooltip="Load (Ctrl+O)">
+                    📁 Load
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <span id="selection-info">A1</span>
+            </div>
+        </div> -->
         <div class="header">
-            <img src="/Task-8/assets/excel-logo.svg" alt="excel-header-logo">
-            <span class="title">Excel Clone</span>
+            <img src="/tmpExcel/assets/excel-logo.svg" alt="excel header logo">
         </div>
 
         <div class="formula-bar">
@@ -21,30 +67,41 @@
             <input type="text" class="formula-input" id="formulaInput" placeholder="Enter formula or value...">
         </div>
 
-        <!-- <div class="excel-toolbar">
-            <button class="toolbar-button" id="boldBtn"><strong>B</strong></button>
-            <button class="toolbar-button" id="italicBtn"><em>I</em></button>
-            <button class="toolbar-button" id="underlineBtn"><u>U</u></button>
-            <div style="border-left: 1px solid #dee2e6; height: 20px; margin: 0 4px;"></div>
-            <button class="toolbar-button" id="leftAlign">⬅</button>
-            <button class="toolbar-button" id="centerAlign">⬛</button>
-            <button class="toolbar-button" id="rightAlign">➡</button>
-            <div style="border-left: 1px solid #dee2e6; height: 20px; margin: 0 4px;"></div>
-            <button class="toolbar-button" id="saveBtn">💾 Save</button>
-            <button class="toolbar-button" id="loadBtn">📁 Load</button>
-        </div> -->
-        
-        <div class="content" id="content">
-            <div class="virtualContainer"></div>
-            <canvas id="mainExcel" class="canvas"></canvas>
+        <div class="grid-container" id="gridContainer">
+            <canvas id="grid-canvas" tabindex="0"></canvas>
+
+            <div class="scrollbar scrollbar-horizontal" id="h-scrollbar">
+                <div class="scrollbar-thumb" id="h-thumb"></div>
+            </div>
+
+            <div class="scrollbar scrollbar-vertical" id="v-scrollbar">
+                <div class="scrollbar-thumb" id="v-thumb"></div>
+            </div>
+
+            <div class="scrollbar-corner"></div>
         </div>
+
+        <!-- <div class="status-bar">
+            <div class="status-info">
+                <span>Ready</span>
+                <span class="loading-indicator" id="loadingIndicator">
+                    <span class="spinner">⟳</span> Processing...
+                </span>
+            </div>
+            <div class="status-info">
+                <span>Double-click to edit • Arrow keys to navigate • Drag to select</span>
+            </div>
+            <div class="status-info">
+                <span>Ctrl+Z/Y: Undo/Redo • Ctrl+C/V/X: Copy/Paste/Cut • F2: Edit</span>
+            </div>
+        </div> -->
 
         <div class="footer">
-            <img src="/Task-8/assets/excel-logo.svg" alt="excel-footer-logo">
+            <img src="/tmpExcel/assets/excel-logo.svg" alt="excel footer logo">
         </div>
     </div>
+
     <script src="index.js"></script>
 </body>
-
 
 </html>
