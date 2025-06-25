@@ -1,3 +1,784 @@
+class sheetManager {
+    /**
+     * 
+     * @param {*String} canvasId id of canvas div
+     * @param {*number} rows number of rows
+     * @param {*number} cols number of columns
+     */
+    constructor(canvasId, rows, cols) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.dpr = window.devicePixelRatio || 1;
+
+        this.cellData = new CellData(rows, cols);
+        this.selection = new SelectionManager();
+        this.commandManager = new CommandManager();
+
+        this.scrollX = 0;
+        this.scrollY = 0;
+        this.viewportWidth = 0;
+        this.viewportHeight = 0;
+
+        this.headerHeight = 30;
+        this.headerWidth = 80;
+
+        this.isEditing = false;
+        this.isDragging = false;
+        this.isResizing = false;
+        this.resizeType = null;
+        this.resizeIndex = -1;
+        this.resizeStartPos = 0;
+        this.resizeStartSize = 0;
+
+        this.cellEditor = null;
+
+        this.setupCanvas();
+        this.setupEventListeners();
+        this.generateSampleData();
+        this.render();
+        this.updateCellReference();
+    }
+
+    setupCanvas() {
+        const container = this.canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+
+        this.viewportWidth = rect.width - 10;
+        this.viewportHeight = rect.height - 10;
+
+        this.canvas.width = this.viewportWidth * this.dpr;
+        this.canvas.height = this.viewportHeight * this.dpr;
+        this.canvas.style.width = this.viewportWidth + 'px';
+        this.canvas.style.height = this.viewportHeight + 'px';
+
+        this.ctx.scale(this.dpr, this.dpr);
+        this.ctx.translate(0.5, 0.5);
+        this.ctx.textBaseline = 'middle';
+        this.ctx.textAlign = 'left';
+    }
+
+    setupEventListeners() {
+        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+
+        window.addEventListener('resize', this.handleResize.bind(this));
+
+        this.setupFormulaInputEvents();
+    }
+
+    setupFormulaInputEvents() {
+        const formulaInput = document.getElementById('formulaInput');
+        if (formulaInput) {
+            formulaInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.commitEdit(formulaInput.value);
+                    formulaInput.blur();
+                    this.canvas.focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.cancelEdit();
+                    formulaInput.blur();
+                    this.canvas.focus();
+                }
+            });
+
+            formulaInput.addEventListener('focus', () => {
+                this.isEditing = true;
+            });
+
+            formulaInput.addEventListener('blur', () => {
+                if (this.isEditing) {
+                    this.commitEdit(formulaInput.value);
+                }
+            });
+        }
+    }
+
+    generateSampleData() {
+        const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
+        headers.forEach((header, col) => {
+            this.cellData.setCell(0, col, header);
+        });
+
+        const fnames = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram'];
+        const lnames = ['Kumar', 'Sharma', 'Patel', 'Gupta', 'Singh'];
+
+        for (let row = 1; row <= 1000; row++) {
+            this.cellData.setCell(row, 0, row);
+            this.cellData.setCell(row, 1, fnames[Math.floor(Math.random() * fnames.length)]);
+            this.cellData.setCell(row, 2, lnames[Math.floor(Math.random() * lnames.length)]);
+            this.cellData.setCell(row, 3, Math.floor(Math.random() * 40) + 22);
+            this.cellData.setCell(row, 4, Math.floor(Math.random() * 100000) + 30000);
+        }
+    }
+
+    getResizeInfo(x, y) {
+        const tolerance = 5;
+
+        if (y <= this.headerHeight && x >= this.headerWidth) {
+            let currentX = this.headerWidth - this.scrollX;
+            for (let col = 0; col < this.cellData.cols; col++) {
+                currentX += this.cellData.getColWidth(col);
+                if (Math.abs(x - currentX) <= tolerance) {
+                    return {
+                        type: 'col',
+                        index: col
+                    };
+                }
+            }
+        }
+
+        if (x <= this.headerWidth && y >= this.headerHeight) {
+            let currentY = this.headerHeight - this.scrollY;
+            for (let row = 0; row < this.cellData.rows; row++) {
+                currentY += this.cellData.getRowHeight(row);
+                if (Math.abs(y - currentY) <= tolerance) {
+                    return {
+                        type: 'row',
+                        index: row
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    updateCursor(x, y) {
+        const resizeInfo = this.getResizeInfo(x, y);
+        if (resizeInfo) {
+            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
+        } else {
+            this.canvas.style.cursor = 'cell';
+        }
+    }
+
+    handleMouseDown(e) {
+        this.canvas.focus();
+        this.hideCellEditor();
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const resizeInfo = this.getResizeInfo(x, y);
+        if (resizeInfo) {
+            this.isResizing = true;
+            this.resizeType = resizeInfo.type;
+            this.resizeIndex = resizeInfo.index;
+            this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
+            this.resizeStartSize = resizeInfo.type === 'col' ?
+                this.cellData.getColWidth(resizeInfo.index) :
+                this.cellData.getRowHeight(resizeInfo.index);
+            return;
+        }
+
+        const cellPos = this.getCellFromPoint(x, y);
+        if (cellPos) {
+            if (e.shiftKey) {
+                this.selection.updateSelection(cellPos.row, cellPos.col);
+            } else {
+                this.selection.startSelection(cellPos.row, cellPos.col);
+                this.isDragging = true;
+            }
+            this.updateCellReference();
+            this.render();
+        }
+    }
+
+    handleMouseMove(e) {
+        if (this.isScrollbarDragging) {
+            if (this.scrollbarDragType === 'horizontal') {
+                const deltaX = e.clientX - this.scrollbarDragStart;
+                const scrollbarWidth = this.viewportWidth - this.headerWidth;
+
+                let totalWidth = 0;
+                for (let col = 0; col < this.cellData.cols; col++) {
+                    totalWidth += this.cellData.getColWidth(col);
+                }
+
+                const maxScroll = Math.max(0, totalWidth - scrollbarWidth);
+                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalWidth)));
+
+            } else if (this.scrollbarDragType === 'vertical') {
+                const deltaY = e.clientY - this.scrollbarDragStart;
+                const scrollbarHeight = this.viewportHeight - this.headerHeight;
+
+                let totalHeight = 0;
+                for (let row = 0; row < this.cellData.rows; row++) {
+                    totalHeight += this.cellData.getRowHeight(row);
+                }
+
+                const maxScroll = Math.max(0, totalHeight - scrollbarHeight);
+                const scrollRatio = deltaY / scrollbarHeight;
+                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalHeight)));
+            }
+
+            this.render();
+            return;
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (this.isResizing) {
+            const currentPos = this.resizeType === 'col' ? x : y;
+            const delta = currentPos - this.resizeStartPos;
+            const newSize = Math.max(30, this.resizeStartSize + delta);
+
+            if (this.resizeType === 'col') {
+                this.cellData.setColWidth(this.resizeIndex, newSize);
+            } else {
+                this.cellData.setRowHeight(this.resizeIndex, newSize);
+            }
+
+            this.render();
+            return;
+        }
+
+        if (this.isDragging) {
+            const cellPos = this.getCellFromPoint(x, y);
+            if (cellPos) {
+                this.selection.updateSelection(cellPos.row, cellPos.col);
+                this.render();
+            }
+        } else {
+            this.updateCursor(x, y);
+        }
+    }
+
+    handleMouseUp(e) {
+        if (this.isScrollbarDragging) {
+            this.isScrollbarDragging = false;
+            this.scrollbarDragType = null;
+        }
+
+        if (this.isResizing) {
+            this.isResizing = false;
+            this.resizeType = null;
+            this.resizeIndex = -1;
+        }
+
+        if (this.isDragging) {
+            this.selection.endSelection();
+            this.isDragging = false;
+        }
+    }
+
+    handleDoubleClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const cellPos = this.getCellFromPoint(x, y);
+        if (cellPos) {
+            this.showCellEditor(cellPos.row, cellPos.col);
+        }
+    }
+
+    showCellEditor(row, col) {
+        this.hideCellEditor();
+
+        const cell = this.cellData.getCell(row, col);
+        const rect = this.getCellRect(row, col);
+
+        const editor = document.createElement('input');
+        editor.type = 'text';
+        editor.className = 'cell-input';
+        editor.value = cell.value || '';
+
+        editor.style.left = (rect.x) + 'px';
+        editor.style.top = (rect.y) + 'px';
+        editor.style.width = (rect.width) + 'px';
+        editor.style.height = (rect.height) + 'px';
+
+        this.canvas.parentElement.appendChild(editor);
+        this.cellEditor = editor;
+
+        editor.focus();
+        editor.select();
+
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.commitCellEdit(row, col, editor.value);
+                this.hideCellEditor();
+                this.canvas.focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.hideCellEditor();
+                this.canvas.focus();
+            }
+        });
+
+        editor.addEventListener('blur', () => {
+            this.commitCellEdit(row, col, editor.value);
+            this.hideCellEditor();
+        });
+    }
+
+    hideCellEditor() {
+        if (this.cellEditor) {
+            this.cellEditor.remove();
+            this.cellEditor = null;
+        }
+    }
+
+    commitCellEdit(row, col, value) {
+        const oldCell = this.cellData.getCell(row, col);
+        const oldValue = oldCell.value || '';
+
+        if (value !== oldValue) {
+            const command = new SetCellValueCommand(this, row, col, value, oldValue);
+            this.commandManager.execute(command);
+            this.render();
+        }
+
+        this.updateCellReference();
+    }
+
+    handleWheel(e) {
+
+        const scrollSpeed = 150;
+        if (e.shiftKey) {
+            this.scrollX = Math.max(0, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+        } else {
+            this.scrollY = Math.max(0, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+        }
+        this.render();
+    }
+
+    handleKeyDown(e) {
+        if (this.isEditing || this.cellEditor) return;
+
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key.toLowerCase()) {
+                case 'z':
+                    e.preventDefault();
+                    if (e.shiftKey) this.redo();
+                    else this.undo();
+                    break;
+                case 'y':
+                    e.preventDefault();
+                    this.redo();
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    this.copy();
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    this.paste();
+                    break;
+                case 'x':
+                    e.preventDefault();
+                    this.cut();
+                    break;
+            }
+            return;
+        }
+
+        const {
+            row,
+            col
+        } = this.selection.activeCell;
+        let newRow = row;
+        let newCol = col;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                e.preventDefault();
+                newRow = Math.max(0, row - 1);
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                newRow = Math.min(this.cellData.rows - 1, row + 1);
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                newCol = Math.max(0, col - 1);
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                newCol = Math.min(this.cellData.cols - 1, col + 1);
+                break;
+            case 'Enter':
+            case 'F2':
+                e.preventDefault();
+                this.showCellEditor(row, col);
+                return;
+            case 'Delete':
+            case 'Backspace':
+                e.preventDefault();
+                this.clearSelectedCells();
+                return;
+            case 'Escape':
+                e.preventDefault();
+                this.selection.selectedRanges = [];
+                this.render();
+                return;
+            default:
+                if (e.key.length === 1 && !e.altKey) {
+                    this.showCellEditor(row, col);
+                    setTimeout(() => {
+                        if (this.cellEditor) {
+                            this.cellEditor.value = e.key;
+                            this.cellEditor.setSelectionRange(1, 1);
+                        }
+                    }, 0);
+                    return;
+                }
+        }
+
+        if (newRow !== row || newCol !== col) {
+            this.selection.setActiveCell(newRow, newCol);
+            this.selection.setActiveCell(newRow, newCol);
+            this.cellDisplay(newRow, newCol);
+            this.updateCellReference();
+            this.render();
+        }
+    }
+
+    handleResize() {
+        this.setupCanvas();
+        this.render();
+    }
+
+    commitEdit(value) {
+        const {
+            row,
+            col
+        } = this.selection.activeCell;
+        const oldCell = this.cellData.getCell(row, col);
+        const oldValue = oldCell.value || '';
+
+        if (value !== oldValue) {
+            const command = new SetCellValueCommand(this, row, col, value, oldValue);
+            this.commandManager.execute(command);
+            this.updateFormulaBar();
+            this.render();
+        }
+
+        this.isEditing = false;
+    }
+
+    cancelEdit() {
+        this.isEditing = false;
+        this.updateFormulaBar();
+    }
+
+    updateFormulaBar() {
+        const formulaInput = document.getElementById('formulaInput');
+        if (formulaInput) {
+            const {
+                row,
+                col
+            } = this.selection.activeCell;
+            const cell = this.cellData.getCell(row, col);
+            formulaInput.value = cell.value || '';
+        }
+    }
+
+    undo() {
+        if (this.commandManager.undo()) {
+            this.updateCellReference();
+            this.updateFormulaBar();
+            this.render();
+        }
+    }
+
+    redo() {
+        if (this.commandManager.redo()) {
+            this.updateCellReference();
+            this.updateFormulaBar();
+            this.render();
+        }
+    }
+
+    clearSelectedCells() {
+        const cells = this.selection.getSelectedCells();
+        cells.forEach(pos => {
+            const oldCell = this.cellData.getCell(pos.row, pos.col);
+            if (oldCell.value) {
+                const command = new ClearCellCommand(this, pos.row, pos.col, oldCell.value);
+                this.commandManager.execute(command);
+            }
+        });
+        this.updateFormulaBar();
+        this.render();
+    }
+
+    setCellValueDirect(row, col, value) {
+        if (value === '' || value == null) {
+            this.cellData.deleteCell(row, col);
+        } else {
+            this.cellData.setCell(row, col, value);
+        }
+    }
+
+    getColumnName(col) {
+        let name = '';
+        col++;
+        while (col > 0) {
+            col--;
+            name = String.fromCharCode(65 + (col % 26)) + name;
+            col = Math.floor(col / 26);
+        }
+        return name;
+    }
+
+    updateCellReference() {
+        const cellRef = document.getElementById('cellReference');
+        if (cellRef) {
+            const {
+                row,
+                col
+            } = this.selection.activeCell;
+            cellRef.textContent = this.getColumnName(col) + (row + 1);
+        }
+        this.updateFormulaBar();
+    }
+
+    getCellFromPoint(x, y) {
+        if (x < this.headerWidth || y < this.headerHeight) return null;
+
+        let currentY = this.headerHeight - this.scrollY;
+        let row = -1;
+        for (let r = 0; r < this.cellData.rows; r++) {
+            const height = this.cellData.getRowHeight(r);
+            if (y >= currentY && y < currentY + height) {
+                row = r;
+                break;
+            }
+            currentY += height;
+        }
+
+        let currentX = this.headerWidth - this.scrollX;
+        let col = -1;
+        for (let c = 0; c < this.cellData.cols; c++) {
+            const width = this.cellData.getColWidth(c);
+            if (x >= currentX && x < currentX + width) {
+                col = c;
+                break;
+            }
+            currentX += width;
+        }
+
+        return (row >= 0 && col >= 0) ? {
+            row,
+            col
+        } : null;
+    }
+
+    getCellRect(row, col) {
+        let x = this.headerWidth - this.scrollX;
+        for (let c = 0; c < col; c++) {
+            x += this.cellData.getColWidth(c);
+        }
+
+        let y = this.headerHeight - this.scrollY;
+        for (let r = 0; r < row; r++) {
+            y += this.cellData.getRowHeight(r);
+        }
+
+        return {
+            x: x,
+            y: y,
+            width: this.cellData.getColWidth(col),
+            height: this.cellData.getRowHeight(row)
+        };
+    }
+
+    cellDisplay(row, col) {
+        const rect = this.getCellRect(row, col);
+
+        if (rect.x < this.headerWidth) {
+            this.scrollX = Math.max(0, this.scrollX - (this.headerWidth - rect.x));
+        } else if (rect.x + rect.width > this.viewportWidth) {
+            this.scrollX += (rect.x + rect.width - this.viewportWidth);
+        }
+
+        if (rect.y < this.headerHeight) {
+            this.scrollY = Math.max(0, this.scrollY - (this.headerHeight - rect.y));
+        } else if (rect.y + rect.height > this.viewportHeight) {
+            this.scrollY += (rect.y + rect.height - this.viewportHeight);
+        }
+    }
+
+    render() {
+        this.ctx.clearRect(-0.5, -0.5, this.viewportWidth, this.viewportHeight);
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+
+        this.drawGrid();
+        this.drawCells();
+        this.drawHeaders();
+        this.drawSelection();
+    }
+
+    drawGrid() {
+        this.ctx.strokeStyle = '#e0e0e0';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+
+        // Horizontal lines
+        let y = this.headerHeight - this.scrollY;
+        for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
+            const height = this.cellData.getRowHeight(row);
+            y += height;
+            if (y >= this.headerHeight) {
+                this.ctx.moveTo(this.headerWidth, y);
+                this.ctx.lineTo(this.viewportWidth, y);
+            }
+        }
+
+        // Vertical lines
+        let x = this.headerWidth - this.scrollX;
+        for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
+            const width = this.cellData.getColWidth(col);
+            x += width;
+            if (x >= this.headerWidth) {
+                this.ctx.moveTo(x, this.headerHeight);
+                this.ctx.lineTo(x, this.viewportHeight);
+            }
+        }
+
+        this.ctx.stroke();
+    }
+
+    drawCells() {
+        this.ctx.font = '13px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'middle';
+
+        let y = this.headerHeight - this.scrollY;
+        for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
+            const height = this.cellData.getRowHeight(row);
+
+            if (y + height >= this.headerHeight) {
+                let x = this.headerWidth - this.scrollX;
+                for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
+                    const width = this.cellData.getColWidth(col);
+
+                    if (x + width >= this.headerWidth) {
+                        const cell = this.cellData.getCell(row, col);
+                        if (cell.value) {
+                            this.ctx.fillStyle = '#000000';
+                            const displayValue = cell.getDisplayValue();
+                            const textX = x + 6;
+                            const textY = y + height / 2;
+
+                            this.ctx.save();
+                            this.ctx.beginPath();
+                            this.ctx.rect(x, y, width, height);
+                            this.ctx.clip();
+                            this.ctx.fillText(displayValue, textX, textY);
+                            this.ctx.restore();
+                        }
+                    }
+                    x += width;
+                }
+            }
+            y += height;
+        }
+    }
+
+    drawHeaders() {
+        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.strokeStyle = '#d0d0d0';
+        this.ctx.lineWidth = 1;
+
+        // Draw column headers
+        this.ctx.fillRect(this.headerWidth, 0, this.viewportWidth - this.headerWidth, this.headerHeight);
+
+        let x = this.headerWidth - this.scrollX;
+        for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
+            const width = this.cellData.getColWidth(col);
+            if (x + width >= this.headerWidth) {
+                // Draw header border
+                this.ctx.beginPath();
+                this.ctx.rect(x, 0, width, this.headerHeight);
+                this.ctx.stroke();
+
+                // Draw header text
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(this.getColumnName(col), x + width / 2, this.headerHeight / 2);
+            }
+            x += width;
+        }
+
+        // Draw row headers
+        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
+
+        let y = this.headerHeight - this.scrollY;
+        for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
+            const height = this.cellData.getRowHeight(row);
+            if (y + height >= this.headerHeight) {
+                // Draw header border
+                this.ctx.beginPath();
+                this.ctx.rect(0, y, this.headerWidth, height);
+                this.ctx.stroke();
+
+                // Draw header text
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
+            }
+            y += height;
+        }
+
+        // Draw corner
+        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
+        this.ctx.beginPath();
+        this.ctx.rect(0, 0, this.headerWidth, this.headerHeight);
+        this.ctx.stroke();
+    }
+
+    drawSelection() {
+        this.ctx.strokeStyle = '#137E43';
+        this.ctx.lineWidth = 2;
+        this.ctx.fillStyle = 'rgba(19, 126, 67, 0.1)';
+
+        this.selection.selectedRanges.forEach(range => {
+            const startRect = this.getCellRect(range.startRow, range.startCol);
+            const endRect = this.getCellRect(range.endRow, range.endCol);
+
+            const x = startRect.x;
+            const y = startRect.y;
+            const width = endRect.x + endRect.width - startRect.x;
+            const height = endRect.y + endRect.height - startRect.y;
+
+            this.ctx.fillRect(x, y, width, height);
+
+            this.ctx.beginPath();
+            this.ctx.rect(x, y, width, height);
+            this.ctx.stroke();
+        });
+
+        const activeRect = this.getCellRect(this.selection.activeCell.row, this.selection.activeCell.col);
+        this.ctx.strokeStyle = '#137E43';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.rect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
+        this.ctx.stroke();
+    }
+}
+
 class Command {
     execute() {
         throw new Error('Must implement execute');
@@ -11,6 +792,14 @@ class Command {
 }
 
 class SetCellValueCommand extends Command {
+    /**
+     * 
+     * @param {*object} grid reference of grid or cell
+     * @param {*number} row 
+     * @param {*number} col 
+     * @param {*number} newValue 
+     * @param {*number} oldValue 
+     */
     constructor(grid, row, col, newValue, oldValue) {
         super();
         this.grid = grid;
@@ -30,10 +819,18 @@ class SetCellValueCommand extends Command {
 
     getDescription() {
         const colName = this.grid.getColumnName(this.col);
+        return `Set ${colName}${this.row + 1}`;
     }
 }
 
 class ClearCellCommand extends Command {
+    /**
+     * 
+     * @param {object} grid reference f grid or cell
+     * @param {*number} row row number
+     * @param {*number} col column number
+     * @param {*String} oldValue cell value
+     */
     constructor(grid, row, col, oldValue) {
         super();
         this.grid = grid;
@@ -52,6 +849,7 @@ class ClearCellCommand extends Command {
 
     getDescription() {
         const colName = this.grid.getColumnName(this.col);
+        return `Clear ${colName}${this.row + 1}`;
     }
 }
 
@@ -71,7 +869,7 @@ class CommandManager {
             this.undoStack.shift();
         }
 
-        this.textChange();
+        this.updateButtons();
     }
 
     undo() {
@@ -79,7 +877,7 @@ class CommandManager {
             const command = this.undoStack.pop();
             command.undo();
             this.redoStack.push(command);
-            this.textChange();
+            this.updateButtons();
             return true;
         }
         return false;
@@ -90,7 +888,7 @@ class CommandManager {
             const command = this.redoStack.pop();
             command.execute();
             this.undoStack.push(command);
-            this.textChange();
+            this.updateButtons();
             return true;
         }
         return false;
@@ -104,33 +902,18 @@ class CommandManager {
         return this.redoStack.length > 0;
     }
 
-    textChange() {
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
-
-        if (undoBtn) {
-            undoBtn.disabled = !this.canUndo();
-            if (this.canUndo()) {
-                const lastCommand = this.undoStack[this.undoStack.length - 1];
-                undoBtn.setAttribute('data-tooltip', `Undo: ${lastCommand.getDescription()}`);
-            } else {
-                undoBtn.setAttribute('data-tooltip', 'Nothing to undo');
-            }
-        }
-
-        if (redoBtn) {
-            redoBtn.disabled = !this.canRedo();
-            if (this.canRedo()) {
-                const nextCommand = this.redoStack[this.redoStack.length - 1];
-                redoBtn.setAttribute('data-tooltip', `Redo: ${nextCommand.getDescription()}`);
-            } else {
-                redoBtn.setAttribute('data-tooltip', 'Nothing to redo');
-            }
-        }
+    updateButtons() {
+        // Button update logic if needed
     }
 }
 
 class Cell {
+    /**
+     * 
+     * @param {number} row row number
+     * @param {*number} col column number
+     * @param {*String} value cell's value or inputed text
+     */
     constructor(row, col, value = '') {
         this.row = row;
         this.col = col;
@@ -142,49 +925,26 @@ class Cell {
 
     detectType(value) {
         if (value === '' || value == null) return 'empty';
-        if (typeof value === 'string' && value.startsWith('=')) return 'formula';
         if (!isNaN(value) && !isNaN(parseFloat(value))) return 'number';
-        if (value instanceof Date) return 'date';
         return 'text';
-    }
-
-    setValue(value) {
-        this.value = value;
-        this.type = this.detectType(value);
-        if (this.type === 'formula') {
-            this.formula = value;
-        }
     }
 
     getDisplayValue() {
         switch (this.type) {
             case 'number':
                 return parseFloat(this.value).toLocaleString();
-            case 'formula':
-                return this.evaluateFormula();
-            case 'date':
-                return this.value.toLocaleDateString();
             default:
                 return this.value.toString();
         }
     }
-
-    evaluateFormula() {
-        if (this.formula && this.formula.startsWith('=')) {
-            try {
-                const expression = this.formula.substring(1);
-                if (/^[\d+\-*/().\s]+$/.test(expression)) {
-                    return eval(expression).toString();
-                }
-            } catch (e) {
-                return '#ERROR!';
-            }
-        }
-        return this.value;
-    }
 }
 
 class CellData {
+    /**
+     * 
+     * @param {number} rows row number
+     * @param {*number} cols column number
+     */
     constructor(rows, cols) {
         this.rows = rows;
         this.cols = cols;
@@ -297,6 +1057,7 @@ class SelectionManager {
         );
     }
 
+
     getSelectedCells() {
         const cells = [];
         this.selectedRanges.forEach(range => {
@@ -313,863 +1074,9 @@ class SelectionManager {
     }
 }
 
-class sheetManager {
-    constructor(canvasId, rows, cols) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        this.dpr = window.devicePixelRatio || 1;
-
-        this.cellData = new CellData(rows, cols);
-        this.selection = new SelectionManager();
-        this.commandManager = new CommandManager();
-
-        this.scrollX = 0;
-        this.scrollY = 0;
-        this.viewportWidth = 0;
-        this.viewportHeight = 0;
-
-        this.headerHeight = 30;
-        this.headerWidth = 80;
-
-        this.isEditing = false;
-        this.isDragging = false;
-        this.isResizing = false;
-        this.resizeType = null;
-        this.resizeIndex = -1;
-
-        this.setupCanvas();
-        this.setupEventListeners();
-        this.setupScrollbars();
-        this.generateSampleData();
-        this.render();
-        this.textChange();
-    }
-
-    setupCanvas() {
-        const container = this.canvas.parentElement;
-        const rect = container.getBoundingClientRect();
-
-        this.viewportWidth = rect.width - 20;
-        this.viewportHeight = rect.height - 20;
-
-        this.canvas.width = this.viewportWidth * this.dpr;
-        this.canvas.height = this.viewportHeight * this.dpr;
-        this.canvas.style.width = this.viewportWidth + 'px';
-        this.canvas.style.height = this.viewportHeight + 'px';
-
-        this.ctx.scale(this.dpr, this.dpr);
-        this.ctx.translate(0.5, 0.5);
-        this.ctx.textBaseline = 'middle';
-        this.ctx.textAlign = 'left';
-    }
-
-    setupEventListeners() {
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
-
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
-
-        window.addEventListener('resize', this.handleResize.bind(this));
-
-        this.setupFormulaInputEvents();
-    }
-
-    setupFormulaInputEvents() {
-        const formulaInput = document.getElementById('formulaInput');
-        if (formulaInput) {
-            formulaInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.commitEdit(formulaInput.value);
-                    formulaInput.blur();
-                    this.canvas.focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.cancelEdit();
-                    formulaInput.blur();
-                    this.canvas.focus();
-                }
-            });
-
-            formulaInput.addEventListener('focus', () => {
-                this.isEditing = true;
-            });
-
-            formulaInput.addEventListener('blur', () => {
-                if (this.isEditing) {
-                    this.commitEdit(formulaInput.value);
-                }
-            });
-        }
-    }
-
-    setupScrollbars() {
-        const hScrollbar = document.getElementById('h-scrollbar');
-        const hThumb = document.getElementById('h-thumb');
-
-        const vScrollbar = document.getElementById('v-scrollbar');
-        const vThumb = document.getElementById('v-thumb');
-
-        this.updateScrollbars();
-    }
-
-    generateSampleData() {
-        const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
-        headers.forEach((header, col) => {
-            this.cellData.setCell(0, col, header);
-        });
-
-        // Generate sample data
-        const fnames = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram'];
-        const lnames = ['Kumar', 'Sharma', 'Patel', 'Gupta', 'Singh'];
-
-        for (let row = 1; row <= 50000; row++) {
-            this.cellData.setCell(row, 0, row);
-            this.cellData.setCell(row, 1, fnames[Math.floor(Math.random() * fnames.length)]);
-            this.cellData.setCell(row, 2, lnames[Math.floor(Math.random() * lnames.length)]);
-            this.cellData.setCell(row, 3, Math.floor(Math.random() * 40) + 22);
-            this.cellData.setCell(row, 4, Math.floor(Math.random() * 100000) + 30000);
-        }
-    }
-
-    handleMouseDown(e) {
-        this.canvas.focus();
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            if (e.shiftKey) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-            } else {
-                this.selection.startSelection(cellPos.row, cellPos.col);
-                this.isDragging = true;
-            }
-            this.textChange();
-            this.render();
-        }
-    }
-
-    handleMouseMove(e) {
-        if (this.isDragging) {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            const cellPos = this.getCellFromPoint(x, y);
-            if (cellPos) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-                this.render();
-            }
-        }
-    }
-
-    handleMouseUp(e) {
-        if (this.isDragging) {
-            this.selection.endSelection();
-            this.isDragging = false;
-        }
-    }
-
-    handleDoubleClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            this.startEdit(cellPos.row, cellPos.col);
-        }
-    }
-
-    handleWheel(e) {
-        e.preventDefault();
-
-        const scrollSpeed = 50;
-        if (e.shiftKey) {
-            this.scrollX = Math.max(0, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
-        } else {
-            this.scrollY = Math.max(0, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
-        }
-
-        this.updateScrollbars();
-        this.render();
-    }
-
-    handleKeyDown(e) {
-        if (this.isEditing) return;
-
-        if (e.ctrlKey || e.metaKey) {
-            switch (e.key.toLowerCase()) {
-                case 'z':
-                    e.preventDefault();
-                    if (e.shiftKey) this.redo();
-                    else this.undo();
-                    break;
-                case 'y':
-                    e.preventDefault();
-                    this.redo();
-                    break;
-                case 'c':
-                    e.preventDefault();
-                    this.copy();
-                    break;
-                case 'v':
-                    e.preventDefault();
-                    this.paste();
-                    break;
-                case 'x':
-                    e.preventDefault();
-                    this.cut();
-                    break;
-                case 's':
-                    e.preventDefault();
-                    this.save();
-                    break;
-                case 'o':
-                    e.preventDefault();
-                    this.load();
-                    break;
-            }
-            return;
-        }
-
-        const {
-            row,
-            col
-        } = this.selection.activeCell;
-        let newRow = row;
-        let newCol = col;
-
-        switch (e.key) {
-            case 'ArrowUp':
-                e.preventDefault();
-                newRow = Math.max(0, row - 1);
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                newRow = Math.min(this.cellData.rows - 1, row + 1);
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                newCol = Math.max(0, col - 1);
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                newCol = Math.min(this.cellData.cols - 1, col + 1);
-                break;
-            case 'Enter':
-            case 'F2':
-                e.preventDefault();
-                this.startEdit(row, col);
-                return;
-            case 'Delete':
-            case 'Backspace':
-                e.preventDefault();
-                this.clearSelectedCells();
-                return;
-            case 'Escape':
-                e.preventDefault();
-                this.selection.selectedRanges = [];
-                this.render();
-                return;
-            default:
-                if (e.key.length === 1 && !e.altKey) {
-                    this.startEdit(row, col, e.key);
-                    return;
-                }
-        }
-
-        if (newRow !== row || newCol !== col) {
-            this.selection.setActiveCell(newRow, newCol);
-            this.ensureCellVisible(newRow, newCol);
-            this.textChange();
-            this.render();
-        }
-    }
-
-    handleResize() {
-        this.setupCanvas();
-        this.updateScrollbars();
-        this.render();
-    }
-
-    getCellFromPoint(x, y) {
-        if (x < this.headerWidth || y < this.headerHeight) return null;
-
-        const adjustedX = x - this.headerWidth + this.scrollX;
-        const adjustedY = y - this.headerHeight + this.scrollY;
-
-        let col = 0;
-        let currentX = 0;
-        while (col < this.cellData.cols && currentX < adjustedX) {
-            currentX += this.cellData.getColWidth(col);
-            col++;
-        }
-        col = Math.max(0, col - 1);
-
-        let row = 0;
-        let currentY = 0;
-        while (row < this.cellData.rows && currentY < adjustedY) {
-            currentY += this.cellData.getRowHeight(row);
-            row++;
-        }
-        row = Math.max(0, row - 1);
-
-        if (col < this.cellData.cols && row < this.cellData.rows) {
-            return {
-                row,
-                col
-            };
-        }
-        return null;
-    }
-
-    getCellRect(row, col) {
-        let x = this.headerWidth;
-        for (let c = 0; c < col; c++) {
-            x += this.cellData.getColWidth(c);
-        }
-        x -= this.scrollX;
-
-        let y = this.headerHeight;
-        for (let r = 0; r < row; r++) {
-            y += this.cellData.getRowHeight(r);
-        }
-        y -= this.scrollY;
-
-        return {
-            x,
-            y,
-            width: this.cellData.getColWidth(col),
-            height: this.cellData.getRowHeight(row)
-        };
-    }
-
-    ensureCellVisible(row, col) {
-        const rect = this.getCellRect(row, col);
-        const viewRight = this.viewportWidth - this.headerWidth;
-        const viewBottom = this.viewportHeight - this.headerHeight;
-
-        if (rect.x < this.headerWidth) {
-            this.scrollX = Math.max(0, this.scrollX - (this.headerWidth - rect.x));
-        } else if (rect.x + rect.width > viewRight) {
-            this.scrollX += (rect.x + rect.width - viewRight);
-        }
-
-        if (rect.y < this.headerHeight) {
-            this.scrollY = Math.max(0, this.scrollY - (this.headerHeight - rect.y));
-        } else if (rect.y + rect.height > viewBottom) {
-            this.scrollY += (rect.y + rect.height - viewBottom);
-        }
-
-        this.updateScrollbars();
-    }
-
-    startEdit(row, col, initialValue = '') {
-        this.isEditing = true;
-        const cell = this.cellData.getCell(row, col);
-        const formulaInput = document.getElementById('formulaInput');
-
-        if (formulaInput) {
-            formulaInput.value = initialValue || cell.value || '';
-            formulaInput.focus();
-            if (initialValue) {
-                formulaInput.setSelectionRange(1, 1);
-            } else {
-                formulaInput.select();
-            }
-        }
-    }
-
-    commitEdit(value) {
-        if (!this.isEditing) return;
-
-        const {
-            row,
-            col
-        } = this.selection.activeCell;
-        const oldCell = this.cellData.getCell(row, col);
-        const oldValue = oldCell.value || '';
-
-        if (value !== oldValue) {
-            const command = new SetCellValueCommand(this, row, col, value, oldValue);
-            this.commandManager.execute(command);
-            this.render();
-        }
-
-        this.isEditing = false;
-        this.textChange();
-    }
-
-    cancelEdit() {
-        this.isEditing = false;
-        this.textChange();
-    }
-
-    setCellValueDirect(row, col, value) {
-        this.cellData.setCell(row, col, value);
-    }
-
-    clearSelectedCells() {
-        const selectedCells = this.selection.getSelectedCells();
-        selectedCells.forEach(({
-            row,
-            col
-        }) => {
-            const oldValue = this.cellData.getCell(row, col).value || '';
-            if (oldValue) {
-                const command = new ClearCellCommand(this, row, col, oldValue);
-                this.commandManager.execute(command);
-            }
-        });
-        this.render();
-    }
-
-    copy() {
-        const selectedCells = this.selection.getSelectedCells();
-        this.selection.copiedCells = selectedCells.map(({
-            row,
-            col
-        }) => ({
-            row,
-            col,
-            value: this.cellData.getCell(row, col).value || ''
-        }));
-
-        const textData = this.getCellsAsText(selectedCells);
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(textData).catch(() => {});
-        }
-    }
-
-    paste() {
-        if (!this.selection.copiedCells || this.selection.copiedCells.length === 0) return;
-
-        const {
-            row: startRow,
-            col: startCol
-        } = this.selection.activeCell;
-        const copiedCells = this.selection.copiedCells;
-
-        const minRow = Math.min(...copiedCells.map(cell => cell.row));
-        const minCol = Math.min(...copiedCells.map(cell => cell.col));
-
-        copiedCells.forEach(({
-            row,
-            col,
-            value
-        }) => {
-            const newRow = startRow + (row - minRow);
-            const newCol = startCol + (col - minCol);
-
-            if (newRow < this.cellData.rows && newCol < this.cellData.cols) {
-                const oldValue = this.cellData.getCell(newRow, newCol).value || '';
-                if (value !== oldValue) {
-                    const command = new SetCellValueCommand(this, newRow, newCol, value, oldValue);
-                    this.commandManager.execute(command);
-                }
-            }
-        });
-
-        this.render();
-    }
-
-    cut() {
-        this.copy();
-        this.clearSelectedCells();
-    }
-
-    getCellsAsText(cells) {
-        if (cells.length === 0) return '';
-
-        const rowMap = new Map();
-        cells.forEach(({
-            row,
-            col
-        }) => {
-            if (!rowMap.has(row)) {
-                rowMap.set(row, []);
-            }
-            rowMap.get(row).push({
-                col,
-                value: this.cellData.getCell(row, col).getDisplayValue()
-            });
-        });
-
-        const rows = Array.from(rowMap.entries()).sort(([a], [b]) => a - b);
-        return rows.map(([row, cols]) => {
-            const sortedCols = cols.sort((a, b) => a.col - b.col);
-            return sortedCols.map(cell => cell.value).join('\t');
-        }).join('\n');
-    }
-
-    undo() {
-        if (this.commandManager.undo()) {
-            this.render();
-        }
-    }
-
-    redo() {
-        if (this.commandManager.redo()) {
-            this.render();
-        }
-    }
-
-    save() {
-        const data = {
-            rows: this.cellData.rows,
-            cols: this.cellData.cols,
-            cells: this.cellData.getAllCells().map(cell => ({
-                row: cell.row,
-                col: cell.col,
-                value: cell.value,
-                type: cell.type
-            })),
-            rowHeights: this.cellData.rowHeights,
-            colWidths: this.cellData.colWidths
-        };
-
-        const dataStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([dataStr], {
-            type: 'application/json'
-        });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'excel-grid-data.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    load() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        this.loadFromData(data);
-                    } catch (error) {
-                        alert('Error loading file: ' + error.message);
-                    }
-                };
-                reader.readAsText(file);
-            }
-        };
-        input.click();
-    }
-
-    loadFromData(data) {
-        this.cellData = new CellData(data.rows, data.cols);
-
-        if (data.cells) {
-            data.cells.forEach(CellData => {
-                this.cellData.setCell(CellData.row, CellData.col, CellData.value);
-            });
-        }
-
-        if (data.rowHeights) {
-            this.cellData.rowHeights = data.rowHeights;
-        }
-
-        if (data.colWidths) {
-            this.cellData.colWidths = data.colWidths;
-        }
-
-        this.selection = new SelectionManager();
-        this.commandManager = new CommandManager();
-        this.scrollX = 0;
-        this.scrollY = 0;
-
-        this.updateScrollbars();
-        this.textChange();
-        this.render();
-    }
-
-    getColumnName(col) {
-        let result = '';
-        while (col >= 0) {
-            result = String.fromCharCode(65 + (col % 26)) + result;
-            col = Math.floor(col / 26) - 1;
-        }
-        return result;
-    }
-
-    textChange() {
-        const {
-            row,
-            col
-        } = this.selection.activeCell;
-        const cellRef = this.getColumnName(col) + (row + 1);
-
-        const cellRefElement = document.getElementById('cellReference');
-        if (cellRefElement) {
-            cellRefElement.textContent = cellRef;
-        }
-
-        const selectionInfo = document.getElementById('selection-info');
-        if (selectionInfo) {
-            if (this.selection.selectedRanges.length > 0) {
-                const range = this.selection.selectedRanges[0];
-                if (range.startRow === range.endRow && range.startCol === range.endCol) {
-                    selectionInfo.textContent = cellRef;
-                } else {
-                    const startRef = this.getColumnName(range.startCol) + (range.startRow + 1);
-                    const endRef = this.getColumnName(range.endCol) + (range.endRow + 1);
-                    selectionInfo.textContent = `${startRef}:${endRef}`;
-                }
-            } else {
-                selectionInfo.textContent = cellRef;
-            }
-        }
-
-        const formulaInput = document.getElementById('formulaInput');
-        if (formulaInput && !this.isEditing) {
-            const cell = this.cellData.getCell(row, col);
-            formulaInput.value = cell.value || '';
-        }
-
-        this.commandManager.textChange();
-    }
-
-    updateScrollbars() {
-        let totalWidth = 0;
-        for (let col = 0; col < this.cellData.cols; col++) {
-            totalWidth += this.cellData.getColWidth(col);
-        }
-
-        let totalHeight = 0;
-        for (let row = 0; row < this.cellData.rows; row++) {
-            totalHeight += this.cellData.getRowHeight(row);
-        }
-
-        const viewportWidth = this.viewportWidth - this.headerWidth;
-        const viewportHeight = this.viewportHeight - this.headerHeight;
-
-        const hScrollbar = document.getElementById('h-scrollbar');
-        const hThumb = document.getElementById('h-thumb');
-        if (hScrollbar && hThumb) {
-            const thumbWidth = Math.max(20, (viewportWidth / totalWidth) * viewportWidth);
-            const thumbLeft = (this.scrollX / (totalWidth - viewportWidth)) * (viewportWidth - thumbWidth);
-
-            hThumb.style.width = thumbWidth + 'px';
-            hThumb.style.left = Math.max(0, Math.min(thumbLeft, viewportWidth - thumbWidth)) + 'px';
-        }
-
-        const vScrollbar = document.getElementById('v-scrollbar');
-        const vThumb = document.getElementById('v-thumb');
-        if (vScrollbar && vThumb) {
-            const thumbHeight = Math.max(20, (viewportHeight / totalHeight) * viewportHeight);
-            const thumbTop = (this.scrollY / (totalHeight - viewportHeight)) * (viewportHeight - thumbHeight);
-
-            vThumb.style.height = thumbHeight + 'px';
-            vThumb.style.top = Math.max(0, Math.min(thumbTop, viewportHeight - thumbHeight)) + 'px';
-        }
-    }
-
-    render() {
-        this.ctx.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
-
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
-
-        this.drawHeaders();
-
-        this.drawCells();
-
-        this.drawSelection();
-
-        this.drawGridLines();
-    }
-
-    drawHeaders() {
-        this.ctx.fillStyle = '#f0f0f0';
-        this.ctx.fillRect(this.headerWidth, 0, this.viewportWidth - this.headerWidth, this.headerHeight);
-
-        this.ctx.fillStyle = '#333';
-        this.ctx.font = '12px Segoe UI';
-        this.ctx.textAlign = 'center';
-
-        let x = this.headerWidth - this.scrollX;
-        for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
-            const width = this.cellData.getColWidth(col);
-            if (x + width > this.headerWidth) {
-                const colName = this.getColumnName(col);
-                this.ctx.fillText(colName, x + width / 2, this.headerHeight / 2);
-            }
-            x += width;
-        }
-
-        this.ctx.fillStyle = '#f0f0f0';
-        this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
-
-        this.ctx.fillStyle = '#333';
-        this.ctx.textAlign = 'center';
-
-        let y = this.headerHeight - this.scrollY;
-        for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
-            const height = this.cellData.getRowHeight(row);
-            if (y + height > this.headerHeight) {
-                this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
-            }
-            y += height;
-        }
-
-        this.ctx.fillStyle = '#e0e0e0';
-        this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
-
-        this.ctx.strokeStyle = '#d0d0d0';
-        this.ctx.lineWidth = 1 / this.dpr;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.headerWidth, 0);
-        this.ctx.lineTo(this.headerWidth, this.viewportHeight);
-        this.ctx.moveTo(0, this.headerHeight);
-        this.ctx.lineTo(this.viewportWidth, this.headerHeight);
-        this.ctx.stroke();
-    }
-
-    drawCells() {
-        this.ctx.font = '13px Segoe UI';
-        this.ctx.textAlign = 'left';
-
-        let startRow = Math.floor(this.scrollY / 25);
-        let endRow = Math.min(this.cellData.rows, startRow + Math.ceil(this.viewportHeight / 25) + 2);
-
-        let startCol = 0;
-        let totalWidth = 0;
-        while (startCol < this.cellData.cols && totalWidth < this.scrollX) {
-            totalWidth += this.cellData.getColWidth(startCol);
-            startCol++;
-        }
-        startCol = Math.max(0, startCol - 1);
-
-        let endCol = startCol;
-        let currentWidth = totalWidth - this.scrollX + this.headerWidth;
-        while (endCol < this.cellData.cols && currentWidth < this.viewportWidth) {
-            currentWidth += this.cellData.getColWidth(endCol);
-            endCol++;
-        }
-
-        for (let row = startRow; row < endRow; row++) {
-            let x = this.headerWidth - this.scrollX;
-            for (let col = 0; col < startCol; col++) {
-                x += this.cellData.getColWidth(col);
-            }
-
-            for (let col = startCol; col < endCol; col++) {
-                const width = this.cellData.getColWidth(col);
-                const height = this.cellData.getRowHeight(row);
-                const y = this.headerHeight + row * height - this.scrollY;
-
-                const cell = this.cellData.getCell(row, col);
-                const displayValue = cell.getDisplayValue();
-
-                if (displayValue) {
-                    // Cell background for data rows
-                    if (row % 2 === 1) {
-                        this.ctx.fillStyle = '#fafafa';
-                        this.ctx.fillRect(x, y, width, height);
-                    }
-                    // Cell text
-                    this.ctx.fillStyle = '#333';
-                    this.ctx.fillText(
-                        displayValue.toString().substring(0, 15),
-                        x + 6,
-                        y + height / 2
-                    );
-                }
-
-                x += width;
-            }
-        }
-    }
-
-    drawSelection() {
-        this.ctx.strokeStyle = '#137E43';
-        this.ctx.lineWidth = 2 / this.dpr;
-        this.ctx.fillStyle = 'rgba(19, 126, 67,.05)';
-
-        this.selection.selectedRanges.forEach(range => {
-            let startX = this.headerWidth - this.scrollX;
-            for (let col = 0; col < range.startCol; col++) {
-                startX += this.cellData.getColWidth(col);
-            }
-
-            let width = 0;
-            for (let col = range.startCol; col <= range.endCol; col++) {
-                width += this.cellData.getColWidth(col);
-            }
-
-            const startY = this.headerHeight + range.startRow * 25 - this.scrollY;
-            const height = (range.endRow - range.startRow + 1) * 25;
-
-            this.ctx.fillRect(startX, startY, width, height);
-
-            this.ctx.strokeRect(startX, startY, width, height);
-        });
-
-        const {
-            row,
-            col
-        } = this.selection.activeCell;
-        const rect = this.getCellRect(row, col);
-        this.ctx.lineWidth = 3 / this.dpr;
-        this.ctx.strokeStyle = 'rgba(19, 126, 67,1)';
-        this.ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-    }
-
-    drawGridLines() {
-        const dpr = window.devicePixelRatio || 1;
-
-        this.ctx.save();
-        this.ctx.scale(dpr, dpr);
-
-        this.ctx.strokeStyle = '#e0e0e0';
-        this.ctx.lineWidth = 1 / this.dpr;
-
-        this.ctx.beginPath();
-
-        let x = this.headerWidth - this.scrollX;
-        for (let col = 0; col <= this.cellData.cols && x < this.viewportWidth; col++) {
-            if (x >= this.headerWidth) {
-                this.ctx.moveTo(Math.floor(x) + 0.5, this.headerHeight);
-                this.ctx.lineTo(Math.floor(x) + 0.5, this.viewportHeight);
-            }
-            if (col < this.cellData.cols) {
-                x += this.cellData.getColWidth(col);
-            }
-        }
-
-        let y = this.headerHeight - this.scrollY;
-        for (let row = 0; row <= this.cellData.rows && y < this.viewportHeight; row++) {
-            if (y >= this.headerHeight) {
-                this.ctx.moveTo(this.headerWidth, Math.floor(y) + 0.5);
-                this.ctx.lineTo(this.viewportWidth, Math.floor(y) + 0.5);
-            }
-            if (row < this.cellData.rows) {
-                y += this.cellData.getRowHeight(row);
-            }
-        }
-
-        this.ctx.stroke();
-        this.ctx.restore();
-    }
-}
+const grid = new sheetManager('grid-canvas', 100000, 500);
 
 document.addEventListener('DOMContentLoaded', () => {
-    const grid = new sheetManager('grid-canvas', 10000, 500);
-    window.excelGrid = grid;
+    grid.canvas.focus();
 });
+grid.canvas.focus();

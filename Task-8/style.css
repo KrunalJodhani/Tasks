@@ -65,9 +65,9 @@ body {
 
 .grid-container {
     position: relative;
-    flex: 1;
-    overflow: hidden;
+    overflow: auto;
     background: white;
+    flex: 1;
 }
 
 #grid-canvas {
@@ -85,61 +85,13 @@ body {
 
 .cell-input {
     position: absolute;
-    border: 1px solid #137E43;
+    border: 2px solid #137E43;
     background: white;
-    font: 13px'Arial';
+    font: 13px 'Arial';
     padding: 2px 6px;
     z-index: 1000;
     resize: none;
-    /* outline: none; */
-    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); */
-}
-
-.scrollbar {
-    position: absolute;
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    z-index: 100;
-}
-
-.scrollbar-horizontal {
-    bottom: 0;
-    left: 0;
-    right: 20px;
-}
-
-.scrollbar-vertical {
-    top: 0;
-    right: 0;
-    bottom: 80px;
-}
-
-.scrollbar-thumb {
-    position: absolute;
-    background: #d0d0d0;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    min-width: 20px;
-    min-height: 20px;
-}
-
-.scrollbar-thumb:hover {
-    background: #b0b0b0;
-}
-
-.scrollbar-thumb:active {
-    background: #909090;
-}
-
-.scrollbar-corner {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 18px;
-    height: 18px;
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
+    outline: none;
 }
 
 .footer {
