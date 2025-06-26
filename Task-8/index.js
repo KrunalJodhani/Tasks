@@ -1,6 +1,65 @@
+/**
+ *  This class manages rendering and interaction for a spreadsheet-like interface using a single HTML canvas.
+ 
+ * @property {HTMLCanvasElement} canvas - The canvas element used for rendering.
+ * @property {CanvasRenderingContext2D} ctx - The 2D context of the canvas.
+ * @property {number} dpr - Device Pixel Ratio for high-DPI rendering.
+ * @property {CellData} cellData - Stores all cell values and dimensions.
+ * @property {SelectionManager} selection - Manages cell selection and active cell.
+ * @property {CommandManager} commandManager - Manages undo/redo command stack.
+ * @property {number} scrollX - Horizontal scroll offset.
+ * @property {number} scrollY - Vertical scroll offset.
+ * @property {number} viewportWidth - Visible width of the canvas (adjusted by container).
+ * @property {number} viewportHeight - Visible height of the canvas (adjusted by container).
+ * @property {number} headerHeight - Height of the header row.
+ * @property {number} headerWidth - Width of the header column.
+ * @property {boolean} isEditing - Whether a cell is currently being edited.
+ * @property {boolean} isDragging - Whether a selection drag is in progress.
+ * @property {boolean} isResizing - Whether a column/row is being resized.
+ * @property {string|null} resizeType - "row" or "col" depending on what's being resized.
+ * @property {number} resizeIndex - Index of the row/column being resized.
+ * @property {number} resizeStartPos - Mouse position when resize started.
+ * @property {number} resizeStartSize - Initial size of the row/col before resizing.
+ * @property {HTMLInputElement|null} cellEditor - The active input element for cell editing.
+
+* @method constructor(canvasId,rows,cols) - Initializes the sheet manager and sets up everything.
+ * @method setupCanvas() - Prepares canvas dimensions and context with DPR scaling.
+ * @method setupEventListeners() - Binds mouse, keyboard, and resize events.
+ * @method setupFormulaInputEvents() - Binds events to formula input DOM element.
+ * @method generateSampleData() - Fills the grid with sample data.
+ * @method getResizeInfo(x,y) - Checks if cursor is near a resizable edge.
+ * @method updateCursor(x,y) - Changes the cursor icon based on hover position.
+ * @method handleMouseDown(e) - Handles mouse down for selection/resizing.
+ * @method handleMouseMove(e) - Handles dragging, hover effects, or resizing.
+ * @method handleMouseUp(e) - Ends resizing or selection drag.
+ * @method handleDoubleClick(e) - Activates editor input on double click.
+ * @method showCellEditor(row,col) - Displays input box over selected cell.
+ * @method hideCellEditor() - Removes the active cell editor input.
+ * @method commitCellEdit(row,col,value) - Commits cell edit and triggers undo support.
+ * @method commitEdit(value) - Commits edit from formula input.
+ * @method cancelEdit() - Cancels formula bar edit.
+ * @method updateFormulaBar() - Updates the formula input value to match the selected cell.
+ * @method undo() - Reverts last change using command manager.
+ * @method redo() - Reapplies undone change using command manager.
+ * @method clearSelectedCells() - Clears content of all selected cells.
+ * @method setCellValueDirect(row,col,value) - Directly sets or clears a cell value.
+ * @method getColumnName(col) - Converts a column index to Excel-style name (e.g., A, B, Z, AA).
+ * @method updateCellReference() - Updates the UI with the active cell's name (A1, B2, etc.).
+ * @method getCellFromPoint(x,y) - Gets cell position (row, col) from mouse coordinates.
+ * @method getCellRect(row,col) - Returns bounding box of a specific cell.
+ * @method cellDisplay(row,col) - Scrolls viewport to bring cell into view.
+ * @method handleWheel(e) - Scrolls viewport with mouse wheel.
+ * @method handleKeyDown(e) - Keyboard-based interaction handler.
+ * @method handleResize() - Reinitializes canvas on window resize.
+ * @method render() - Main draw function, calls all rendering sub-functions.
+ * @method drawGrid() - Draws the grid lines.
+ * @method drawCells() - Draws visible cell values.
+ * @method drawHeaders() - Draws row and column headers.
+ * @method drawSelection() - Draws selected range and active cell border.
+ */
 class sheetManager {
     /**
-     * 
+     * constructor
      * @param {*String} canvasId id of canvas div
      * @param {*number} rows number of rows
      * @param {*number} cols number of columns
@@ -39,18 +98,19 @@ class sheetManager {
         this.updateCellReference();
     }
 
+
     setupCanvas() {
         const container = this.canvas.parentElement;
         const rect = container.getBoundingClientRect();
-
+    
         this.viewportWidth = rect.width - 10;
         this.viewportHeight = rect.height - 10;
-
+    
         this.canvas.width = this.viewportWidth * this.dpr;
         this.canvas.height = this.viewportHeight * this.dpr;
         this.canvas.style.width = this.viewportWidth + 'px';
         this.canvas.style.height = this.viewportHeight + 'px';
-
+    
         this.ctx.scale(this.dpr, this.dpr);
         this.ctx.translate(0.5, 0.5);
         this.ctx.textBaseline = 'middle';
@@ -120,6 +180,12 @@ class sheetManager {
         }
     }
 
+    /**
+     * 
+     * @param {*number} x x position of row/columnn
+     * @param {*number} y y position of row/columnn
+     * @returns object which returns resize type is row/column and row/column's index
+     */
     getResizeInfo(x, y) {
         const tolerance = 5;
 
@@ -152,6 +218,11 @@ class sheetManager {
         return null;
     }
 
+    /**
+     * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
+     * @param {*number} x cusrsor's x position
+     * @param {*number} y cursor's y position
+     */
     updateCursor(x, y) {
         const resizeInfo = this.getResizeInfo(x, y);
         if (resizeInfo) {
@@ -161,6 +232,11 @@ class sheetManager {
         }
     }
 
+    /**
+     * Handles the mouse down event on the canvas.
+     * @param {*MouseEvent} e The mouse event object triggered on mousedown.
+     * @returns {void}
+     */
     handleMouseDown(e) {
         this.canvas.focus();
         this.hideCellEditor();
@@ -192,7 +268,17 @@ class sheetManager {
             this.updateCellReference();
             this.render();
         }
+
+        e.preventDefault();
+        this.selection.selectedRanges = [];
+        this.render();
     }
+
+    /**
+     * Handles the mouse move event on the canvas.
+     * @param {*MouseEvent} e The mouse event object triggered on mouseMove
+     * @returns {void}
+     */
 
     handleMouseMove(e) {
         if (this.isScrollbarDragging) {
@@ -224,7 +310,7 @@ class sheetManager {
 
             this.render();
             return;
-        }
+        }   
 
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -256,6 +342,10 @@ class sheetManager {
         }
     }
 
+    /**
+     * The mouse event object triggered on mouse up
+     * @param {*MouseEvent} e The mouse event object triggered on mouseUp
+     */
     handleMouseUp(e) {
         if (this.isScrollbarDragging) {
             this.isScrollbarDragging = false;
@@ -274,6 +364,10 @@ class sheetManager {
         }
     }
 
+    /**
+     * Handles the double click event on the canvas.
+     * @param {*mouseEvent} e The mouse event object triggered on double click
+     */
     handleDoubleClick(e) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -285,6 +379,11 @@ class sheetManager {
         }
     }
 
+    /**
+     * show the input box over the selected cell
+     * @param {*index} row selected cell's row's index
+     * @param {*index} col selceted cell's column's index
+     */
     showCellEditor(row, col) {
         this.hideCellEditor();
 
@@ -333,6 +432,12 @@ class sheetManager {
         }
     }
 
+    /**
+     * update the enterd value in selected cell
+     * @param {*number/index} row selected cell's row's index
+     * @param {*number/index} col selected cell's column's index
+     * @param {*string} value value of selected cell
+     */
     commitCellEdit(row, col, value) {
         const oldCell = this.cellData.getCell(row, col);
         const oldValue = oldCell.value || '';
@@ -346,6 +451,10 @@ class sheetManager {
         this.updateCellReference();
     }
 
+    /**
+     * Handles the mouse scroll event on the canvas.
+     * @param {*mousEvent} e The mouse event object triggered on mouse scroll
+     */
     handleWheel(e) {
 
         const scrollSpeed = 150;
@@ -357,6 +466,11 @@ class sheetManager {
         this.render();
     }
 
+    /**
+     * Handles the key down event on the canvas.
+     * @param {*keybordEvent} e The keyboard event object triggered on key press
+     * @returns {void}
+     */
     handleKeyDown(e) {
         if (this.isEditing || this.cellEditor) return;
 
@@ -453,6 +567,10 @@ class sheetManager {
         this.render();
     }
 
+    /**
+     * change the value of selected cell
+     * @param {*string} value text/content of selected cell
+     */
     commitEdit(value) {
         const {
             row,
@@ -517,6 +635,12 @@ class sheetManager {
         this.render();
     }
 
+    /**
+     * set the cell value
+     * @param {*number/index} row selected cell's row's index
+     * @param {*number/index} col selected cell's column's index
+     * @param {*string} value value of selected cell
+     */
     setCellValueDirect(row, col, value) {
         if (value === '' || value == null) {
             this.cellData.deleteCell(row, col);
@@ -525,6 +649,11 @@ class sheetManager {
         }
     }
 
+    /**
+     * getter method for column
+     * @param {*string} col column index
+     * @returns spexific number of column converted from string
+     */
     getColumnName(col) {
         let name = '';
         col++;
@@ -548,6 +677,12 @@ class sheetManager {
         this.updateFormulaBar();
     }
 
+    /**
+     * from the cursor point it get cell
+     * @param {number*} x x position of cursor on screen
+     * @param {*number} y y position of cursor on screen
+     * @returns an object which returns row and column index of cell
+     */
     getCellFromPoint(x, y) {
         if (x < this.headerWidth || y < this.headerHeight) return null;
 
@@ -579,6 +714,12 @@ class sheetManager {
         } : null;
     }
 
+    /**
+     * get the cell's rectangel from row and column
+     * @param {*number} row 
+     * @param {*number} col 
+     * @returns an obejet which has cell's height, width, x and y co-ordinate
+     */
     getCellRect(row, col) {
         let x = this.headerWidth - this.scrollX;
         for (let c = 0; c < col; c++) {
@@ -598,6 +739,11 @@ class sheetManager {
         };
     }
 
+    /**
+     * from the row and column display the cell
+     * @param {*number/index} row row's column
+     * @param {*number/index} col cell's column 
+     */
     cellDisplay(row, col) {
         const rect = this.getCellRect(row, col);
 
@@ -615,7 +761,7 @@ class sheetManager {
     }
 
     render() {
-        this.ctx.clearRect(-0.5, -0.5, this.viewportWidth, this.viewportHeight);
+        this.ctx.clearRect(-0.5, -0.5, this.viewportWidth+1, this.viewportHeight+1);
 
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
@@ -713,7 +859,7 @@ class sheetManager {
                 // Draw header text
                 this.ctx.fillStyle = '#000000';
                 this.ctx.font = 'bold 12px Arial';
-                this.ctx.textAlign = 'center';
+                this.ctx.textAlign = 'left';
                 this.ctx.fillText(this.getColumnName(col), x + width / 2, this.headerHeight / 2);
             }
             x += width;
@@ -779,6 +925,12 @@ class sheetManager {
     }
 }
 
+/**
+ * abstract class 
+ * @method execute() - Executes the command logic. Must be implemented in subclass.
+ * @method undo() - Reverts the command logic. Must be implemented in subclass.
+ * @method getDescription() - Returns a string description of the command (optional override).
+ */
 class Command {
     execute() {
         throw new Error('Must implement execute');
@@ -791,14 +943,21 @@ class Command {
     }
 }
 
+
+/**
+ * @method constructer take the grid reference row and column to track the cell and change the value of the cell
+ * @method execute() - Clears the cell content by setting its value to an empty string.
+ * @method undo() - Restores the old value of the cell (undoes the clear operation).
+ * @method getDescription() - Returns a string description like "Clear B2" for logging or UI.
+ */
 class SetCellValueCommand extends Command {
     /**
-     * 
+     * constructer which set data 
      * @param {*object} grid reference of grid or cell
-     * @param {*number} row 
-     * @param {*number} col 
-     * @param {*number} newValue 
-     * @param {*number} oldValue 
+     * @param {*number} row cell row index
+     * @param {*number} col cell column index
+     * @param {*number} newValue new value of cell
+     * @param {*number} oldValue old value of cell
      */
     constructor(grid, row, col, newValue, oldValue) {
         super();
@@ -823,9 +982,20 @@ class SetCellValueCommand extends Command {
     }
 }
 
+/**
+ * * @constructor
+ * @param {object} grid - Reference to the sheetManager instance for cell manipulation.
+ * @param {number} row - The row index of the cell to be cleared.
+ * @param {number} col - The column index of the cell to be cleared.
+ * @param {string} oldValue - The previous value of the cell before it was cleared.
+ * 
+ * @method execute() - Clears the cell content by setting its value to an empty string.
+ * @method undo() - Restores the old value of the cell (undoes the clear operation).
+ * @method getDescription() - Returns a string description like "Clear B2" for logging or UI.
+ */
 class ClearCellCommand extends Command {
     /**
-     * 
+     * constucter which stores the value of cell's metadata
      * @param {object} grid reference f grid or cell
      * @param {*number} row row number
      * @param {*number} col column number
@@ -853,6 +1023,30 @@ class ClearCellCommand extends Command {
     }
 }
 
+/**
+ * @property {Array<Command>} undoStack - Stack of commands for undo operations.
+ * @property {Array<Command>} redoStack - Stack of commands for redo operations.
+ * @property {number} maxHistorySize - Maximum number of commands stored in undo history.
+ * 
+ * @constructor Initializes the undo/redo stacks and sets the history size limit.
+ * 
+ * @method execute(command: Command): void  
+ * Executes a command, pushes it to the undo stack, and clears the redo stack.
+ * 
+ * @method undo(): boolean  
+ * Undoes the last executed command and moves it to the redo stack.  
+ * Returns `true` if successful, `false` if no commands are available.
+ * 
+ * @method redo(): boolean  
+ * Re-executes the last undone command and moves it back to the undo stack.  
+ * Returns `true` if successful, `false` if no commands are available.
+ * 
+ * @method canUndo(): boolean  
+ * Returns `true` if there are commands available to undo.
+ * 
+ * @method canRedo(): boolean  
+ * Returns `true` if there are commands available to redo.
+ */
 class CommandManager {
     constructor() {
         this.undoStack = [];
@@ -860,6 +1054,10 @@ class CommandManager {
         this.maxHistorySize = 100;
     }
 
+    /**
+     * 
+     * @param {*object} command key stroke command 
+     */
     execute(command) {
         command.execute();
         this.undoStack.push(command);
@@ -868,8 +1066,6 @@ class CommandManager {
         if (this.undoStack.length > this.maxHistorySize) {
             this.undoStack.shift();
         }
-
-        this.updateButtons();
     }
 
     undo() {
@@ -877,7 +1073,6 @@ class CommandManager {
             const command = this.undoStack.pop();
             command.undo();
             this.redoStack.push(command);
-            this.updateButtons();
             return true;
         }
         return false;
@@ -888,7 +1083,6 @@ class CommandManager {
             const command = this.redoStack.pop();
             command.execute();
             this.undoStack.push(command);
-            this.updateButtons();
             return true;
         }
         return false;
@@ -901,12 +1095,13 @@ class CommandManager {
     canRedo() {
         return this.redoStack.length > 0;
     }
-
-    updateButtons() {
-        // Button update logic if needed
-    }
 }
 
+/**
+ * @constructor from the canvas create a cell
+ * @method detectType check the type of cell
+ * @method getDisplayValue check the type of value and convert it according to it
+ */
 class Cell {
     /**
      * 
@@ -923,6 +1118,11 @@ class Cell {
         this.format = null;
     }
 
+    /**
+     * 
+     * @param {*string/number} value cell's value
+     * @returns type of data is it number string or empty cell
+     */
     detectType(value) {
         if (value === '' || value == null) return 'empty';
         if (!isNaN(value) && !isNaN(parseFloat(value))) return 'number';
@@ -939,6 +1139,17 @@ class Cell {
     }
 }
 
+/**
+ * @constructor create map of data size and also create an array of rows and column's height
+ * @method getCell return the cell's data's key of map
+ * @method setCell change the cell's value and update it into map
+ * @method deleteCell delete the cell's data and also remove from the map
+ * @method getRowHeight get the height of cell
+ * @method setRowHeight change the height of cell also changes it in row height array
+ * @method getColWidth get widht of column
+ * @method setColWidth set/ change the width of column also changes it in column widht array
+ * @method getAllCells return all cell data from map
+ */
 class CellData {
     /**
      * 
@@ -955,11 +1166,24 @@ class CellData {
         this.frozenCols = 0;
     }
 
+    /**
+     * get the cell data from map
+     * @param {*number} row 
+     * @param {*number} col 
+     * @returns key of map for find the cell data
+     */
     getCell(row, col) {
         const key = `${row},${col}`;
         return this.data.get(key) || new Cell(row, col);
     }
 
+    /**
+     * for set cell data and store it in map
+     * @param {*number} row index of row
+     * @param {*number} col index of column
+     * @param {*string} value cell value
+     * @returns cell object
+     */
     setCell(row, col, value) {
         const key = `${row},${col}`;
         const cell = new Cell(row, col, value);
@@ -967,23 +1191,48 @@ class CellData {
         return cell;
     }
 
+    /**
+     * for deleting the cell data
+     * @param {*number} row index of row
+     * @param {*number} col index of column
+     */
     deleteCell(row, col) {
         const key = `${row},${col}`;
         this.data.delete(key);
     }
 
+    /**
+     * returns the height of row
+     * @param {*number} row index of row 
+     * @returns height of row by default returns 25 
+     */
     getRowHeight(row) {
         return this.rowHeights[row] || 25;
     }
 
+    /**
+     * set the height of row
+     * @param {*number} row index of row 
+     * @param {*number} height new height of row 
+     */
     setRowHeight(row, height) {
         this.rowHeights[row] = Math.max(15, height);
     }
 
+    /**
+     * returns the width of column
+     * @param {*number} col index of column
+     * @returns widhth of column by default returns 100
+     */
     getColWidth(col) {
         return this.colWidths[col] || 100;
     }
 
+    /**
+     * set the widht of column
+     * @param {*number} col index of column 
+     * @param {*number} widhth new width of column
+     */
     setColWidth(col, width) {
         this.colWidths[col] = Math.max(30, width);
     }
@@ -997,86 +1246,129 @@ class CellData {
     }
 }
 
-class SelectionManager {
-    constructor() {
-        this.activeCell = {
-            row: 0,
-            col: 0
-        };
-        this.selectedRanges = [];
-        this.isSelecting = false;
-        this.selectionStart = null;
-        this.copiedCells = null;
-    }
+/**
+ * @property {{row: number, col: number}} activeCell - The currently focused cell.
+ * @property {Array<Object>} selectedRanges - Array of selection ranges containing start and end coordinates.
+ * @property {boolean} isSelecting - Indicates whether a drag selection is in progress.
+ * @property {?{row: number, col: number}} selectionStart - Starting point of a drag selection.
+ * @property {?Array<Object>} copiedCells - Stores copied cell references for clipboard operations.
+ * 
+ * @constructor  Initializes the selection state and active cell to the top-left corner.
+ * 
+ * @method setActiveCell(row: number, col: number): Sets the current active cell and clears any multi-cell selections.
+ * 
+ * @method startSelection(row: number, col: number): Begins a drag selection from the specified cell. Marks it as active and stores the starting point.
+ * 
+ * @method updateSelection(row: number, col: number):  Updates the selection range dynamically based on current cursor position during dragging.
+ * Returns early if selection is not active.
+ * 
+ * @method endSelection(): Ends an ongoing selection operation and resets selection start.
+ * 
+ * @method isSelected(row: number, col: number): Checks whether the specified cell is part of any selected range.
+ * 
+ * @method getSelectedCells():  Returns a flat array of all selected cell coordinates.
+ */
+    class SelectionManager {
+        constructor() {
+            this.activeCell = {
+                row: 0,
+                col: 0
+            };
+            this.selectedRanges = [];
+            this.isSelecting = false;
+            this.selectionStart = null;
+            this.copiedCells = null;
+        }
 
-    setActiveCell(row, col) {
-        this.activeCell = {
-            row,
-            col
-        };
-        this.selectedRanges = [{
-            startRow: row,
-            startCol: col,
-            endRow: row,
-            endCol: col
-        }];
-    }
+        /**
+         * set the selected cell
+         * @param {*number} row row of active selectd cell
+         * @param {*number} col column of active selectd cell
+         */
+        setActiveCell(row, col) {
+            this.activeCell = {
+                row,
+                col
+            };
+            this.selectedRanges = [{
+                startRow: row,
+                startCol: col,
+                endRow: row,
+                endCol: col
+            }];
+        }
 
-    startSelection(row, col) {
-        this.isSelecting = true;
-        this.selectionStart = {
-            row,
-            col
-        };
-        this.activeCell = {
-            row,
-            col
-        };
-    }
+        /**
+         * on selection start it willl set the start and end selection row column
+         * @param {*number} row last selected cell's row
+         * @param {*number} col last selected cell's column
+         */
+        startSelection(row, col) {
+            this.isSelecting = true;
+            this.selectionStart = {
+                row,
+                col
+            };
+            this.activeCell = {
+                row,
+                col
+            };
+        }
 
-    updateSelection(row, col) {
-        if (!this.isSelecting) return;
+        /**
+         * based on mouse move select the cell
+         * @param {*number} row selected cell's row
+         * @param {*number} col selected cell's column
+         * @returns if not selecting area
+         */
+        updateSelection(row, col) {
+            if (!this.isSelecting) return;
 
-        this.selectedRanges = [{
-            startRow: Math.min(this.selectionStart.row, row),
-            startCol: Math.min(this.selectionStart.col, col),
-            endRow: Math.max(this.selectionStart.row, row),
-            endCol: Math.max(this.selectionStart.col, col)
-        }];
-    }
+            this.selectedRanges = [{
+                startRow: Math.min(this.selectionStart.row, row),
+                startCol: Math.min(this.selectionStart.col, col),
+                endRow: Math.max(this.selectionStart.row, row),
+                endCol: Math.max(this.selectionStart.col, col)
+            }];
+        }
 
-    endSelection() {
-        this.isSelecting = false;
-        this.selectionStart = null;
-    }
+        endSelection() {
+            this.isSelecting = false;
+            this.selectionStart = null;
+        }
 
-    isSelected(row, col) {
-        return this.selectedRanges.some(range =>
-            row >= range.startRow && row <= range.endRow &&
-            col >= range.startCol && col <= range.endCol
-        );
-    }
+        /**
+         * return true if cell is in selected else false
+         * @param {*number} row row index of cell
+         * @param {*number} col column index of cell
+         * @returns boolean if the cell with given row and column is selected or not
+         */
+        isSelected(row, col) {
+            return this.selectedRanges.some(range =>
+                row >= range.startRow && row <= range.endRow &&
+                col >= range.startCol && col <= range.endCol
+            );
+        }
 
 
-    getSelectedCells() {
-        const cells = [];
-        this.selectedRanges.forEach(range => {
-            for (let row = range.startRow; row <= range.endRow; row++) {
-                for (let col = range.startCol; col <= range.endCol; col++) {
-                    cells.push({
-                        row,
-                        col
-                    });
+        getSelectedCells() {
+            const cells = [];
+            this.selectedRanges.forEach(range => {
+                for (let row = range.startRow; row <= range.endRow; row++) {
+                    for (let col = range.startCol; col <= range.endCol; col++) {
+                        cells.push({
+                            row,
+                            col
+                        });
+                    }
                 }
-            }
-        });
-        return cells;
+            });
+            return cells;
+        }
     }
-}
 
 const grid = new sheetManager('grid-canvas', 100000, 500);
 
 document.addEventListener('DOMContentLoaded', () => {
     grid.canvas.focus();
 });
-grid.canvas.focus();
