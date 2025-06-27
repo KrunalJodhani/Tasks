@@ -102,15 +102,15 @@ class sheetManager {
     setupCanvas() {
         const container = this.canvas.parentElement;
         const rect = container.getBoundingClientRect();
-    
+
         this.viewportWidth = rect.width - 10;
         this.viewportHeight = rect.height - 10;
-    
+
         this.canvas.width = this.viewportWidth * this.dpr;
         this.canvas.height = this.viewportHeight * this.dpr;
         this.canvas.style.width = this.viewportWidth + 'px';
         this.canvas.style.height = this.viewportHeight + 'px';
-    
+
         this.ctx.scale(this.dpr, this.dpr);
         this.ctx.translate(0.5, 0.5);
         this.ctx.textBaseline = 'middle';
@@ -310,7 +310,7 @@ class sheetManager {
 
             this.render();
             return;
-        }   
+        }
 
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -761,7 +761,7 @@ class sheetManager {
     }
 
     render() {
-        this.ctx.clearRect(-0.5, -0.5, this.viewportWidth+1, this.viewportHeight+1);
+        this.ctx.clearRect(-0.5, -0.5, this.viewportWidth + 1, this.viewportHeight + 1);
 
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
@@ -847,19 +847,40 @@ class sheetManager {
         // Draw column headers
         this.ctx.fillRect(this.headerWidth, 0, this.viewportWidth - this.headerWidth, this.headerHeight);
 
+        // Draw column headers with selection highlighting
         let x = this.headerWidth - this.scrollX;
         for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
             const width = this.cellData.getColWidth(col);
             if (x + width >= this.headerWidth) {
-                // Draw header border
+                const isSelected = this.selection.selectedRanges.some(range =>
+                    col >= range.startCol && col <= range.endCol
+                ) || col === this.selection.activeCell.col;
+
+                // Set background color based on selection
+                this.ctx.fillStyle = isSelected ? '#CAEAD8' : '#f8f9fa';
+                this.ctx.fillRect(x, 0, width, this.headerHeight);
+
+                // Draw normal header border
+                this.ctx.strokeStyle = '#d0d0d0';
+                this.ctx.lineWidth = 1;
                 this.ctx.beginPath();
                 this.ctx.rect(x, 0, width, this.headerHeight);
                 this.ctx.stroke();
 
+                // Draw thick bottom border for selected columns (Excel-style)
+                if (isSelected) {
+                    this.ctx.strokeStyle = '#137E43';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, this.headerHeight);
+                    this.ctx.lineTo(x + width, this.headerHeight);
+                    this.ctx.stroke();
+                }
+
                 // Draw header text
                 this.ctx.fillStyle = '#000000';
                 this.ctx.font = 'bold 12px Arial';
-                this.ctx.textAlign = 'left';
+                this.ctx.textAlign = 'center';
                 this.ctx.fillText(this.getColumnName(col), x + width / 2, this.headerHeight / 2);
             }
             x += width;
@@ -869,20 +890,43 @@ class sheetManager {
         this.ctx.fillStyle = '#f8f9fa';
         this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
 
+        // Draw row headers with selection highlighting
         let y = this.headerHeight - this.scrollY;
         for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
             const height = this.cellData.getRowHeight(row);
             if (y + height >= this.headerHeight) {
-                // Draw header border
+                const isSelected = this.selection.selectedRanges.some(range =>
+                    row >= range.startRow && row <= range.endRow
+                ) || row === this.selection.activeCell.row;
+
+                // Set background color based on selection
+                this.ctx.fillStyle = isSelected ? '#CAEAD8' : '#f8f9fa';
+                this.ctx.fillRect(0, y, this.headerWidth, height);
+
+                // Draw normal header border
+                this.ctx.strokeStyle = '#d0d0d0';
+                this.ctx.lineWidth = 1;
                 this.ctx.beginPath();
                 this.ctx.rect(0, y, this.headerWidth, height);
                 this.ctx.stroke();
 
+                // Draw thick right border for selected rows (Excel-style)
+                if (isSelected) {
+                    this.ctx.strokeStyle = '#137E43';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.headerWidth, y);
+                    this.ctx.lineTo(this.headerWidth, y + height);
+                    this.ctx.stroke();
+                }
+
                 // Draw header text
                 this.ctx.fillStyle = '#000000';
                 this.ctx.font = 'bold 12px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
+                this.ctx.textAlign = 'right';
+                let rowHeaderDyWidth = this.ctx.measureText((row+1).toString()).width;
+                this.ctx.fillText((row + 1).toString(), this.headerWidth - 8, y + height / 2);
+                console.log(rowHeaderDyWidth);
             }
             y += height;
         }
@@ -890,6 +934,8 @@ class sheetManager {
         // Draw corner
         this.ctx.fillStyle = '#f8f9fa';
         this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
+        this.ctx.strokeStyle = '#d0d0d0';
+        this.ctx.lineWidth = 1;
         this.ctx.beginPath();
         this.ctx.rect(0, 0, this.headerWidth, this.headerHeight);
         this.ctx.stroke();
@@ -1268,104 +1314,104 @@ class CellData {
  * 
  * @method getSelectedCells():  Returns a flat array of all selected cell coordinates.
  */
-    class SelectionManager {
-        constructor() {
-            this.activeCell = {
-                row: 0,
-                col: 0
-            };
-            this.selectedRanges = [];
-            this.isSelecting = false;
-            this.selectionStart = null;
-            this.copiedCells = null;
-        }
-
-        /**
-         * set the selected cell
-         * @param {*number} row row of active selectd cell
-         * @param {*number} col column of active selectd cell
-         */
-        setActiveCell(row, col) {
-            this.activeCell = {
-                row,
-                col
-            };
-            this.selectedRanges = [{
-                startRow: row,
-                startCol: col,
-                endRow: row,
-                endCol: col
-            }];
-        }
-
-        /**
-         * on selection start it willl set the start and end selection row column
-         * @param {*number} row last selected cell's row
-         * @param {*number} col last selected cell's column
-         */
-        startSelection(row, col) {
-            this.isSelecting = true;
-            this.selectionStart = {
-                row,
-                col
-            };
-            this.activeCell = {
-                row,
-                col
-            };
-        }
-
-        /**
-         * based on mouse move select the cell
-         * @param {*number} row selected cell's row
-         * @param {*number} col selected cell's column
-         * @returns if not selecting area
-         */
-        updateSelection(row, col) {
-            if (!this.isSelecting) return;
-
-            this.selectedRanges = [{
-                startRow: Math.min(this.selectionStart.row, row),
-                startCol: Math.min(this.selectionStart.col, col),
-                endRow: Math.max(this.selectionStart.row, row),
-                endCol: Math.max(this.selectionStart.col, col)
-            }];
-        }
-
-        endSelection() {
-            this.isSelecting = false;
-            this.selectionStart = null;
-        }
-
-        /**
-         * return true if cell is in selected else false
-         * @param {*number} row row index of cell
-         * @param {*number} col column index of cell
-         * @returns boolean if the cell with given row and column is selected or not
-         */
-        isSelected(row, col) {
-            return this.selectedRanges.some(range =>
-                row >= range.startRow && row <= range.endRow &&
-                col >= range.startCol && col <= range.endCol
-            );
-        }
-
-
-        getSelectedCells() {
-            const cells = [];
-            this.selectedRanges.forEach(range => {
-                for (let row = range.startRow; row <= range.endRow; row++) {
-                    for (let col = range.startCol; col <= range.endCol; col++) {
-                        cells.push({
-                            row,
-                            col
-                        });
-                    }
-                }
-            });
-            return cells;
-        }
+class SelectionManager {
+    constructor() {
+        this.activeCell = {
+            row: 0,
+            col: 0
+        };
+        this.selectedRanges = [];
+        this.isSelecting = false;
+        this.selectionStart = null;
+        this.copiedCells = null;
     }
+
+    /**
+     * set the selected cell
+     * @param {*number} row row of active selectd cell
+     * @param {*number} col column of active selectd cell
+     */
+    setActiveCell(row, col) {
+        this.activeCell = {
+            row,
+            col
+        };
+        this.selectedRanges = [{
+            startRow: row,
+            startCol: col,
+            endRow: row,
+            endCol: col
+        }];
+    }
+
+    /**
+     * on selection start it willl set the start and end selection row column
+     * @param {*number} row last selected cell's row
+     * @param {*number} col last selected cell's column
+     */
+    startSelection(row, col) {
+        this.isSelecting = true;
+        this.selectionStart = {
+            row,
+            col
+        };
+        this.activeCell = {
+            row,
+            col
+        };
+    }
+
+    /**
+     * based on mouse move select the cell
+     * @param {*number} row selected cell's row
+     * @param {*number} col selected cell's column
+     * @returns if not selecting area
+     */
+    updateSelection(row, col) {
+        if (!this.isSelecting) return;
+
+        this.selectedRanges = [{
+            startRow: Math.min(this.selectionStart.row, row),
+            startCol: Math.min(this.selectionStart.col, col),
+            endRow: Math.max(this.selectionStart.row, row),
+            endCol: Math.max(this.selectionStart.col, col)
+        }];
+    }
+
+    endSelection() {
+        this.isSelecting = false;
+        this.selectionStart = null;
+    }
+
+    /**
+     * return true if cell is in selected else false
+     * @param {*number} row row index of cell
+     * @param {*number} col column index of cell
+     * @returns boolean if the cell with given row and column is selected or not
+     */
+    isSelected(row, col) {
+        return this.selectedRanges.some(range =>
+            row >= range.startRow && row <= range.endRow &&
+            col >= range.startCol && col <= range.endCol
+        );
+    }
+
+
+    getSelectedCells() {
+        const cells = [];
+        this.selectedRanges.forEach(range => {
+            for (let row = range.startRow; row <= range.endRow; row++) {
+                for (let col = range.startCol; col <= range.endCol; col++) {
+                    cells.push({
+                        row,
+                        col
+                    });
+                }
+            }
+        });
+        return cells;
+    }
+}
 
 const grid = new sheetManager('grid-canvas', 100000, 500);
 

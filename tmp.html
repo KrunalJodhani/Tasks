@@ -7,123 +7,115 @@
     <title>Excel Grid</title>
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            overflow: hidden;
-        }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    overflow: hidden;
+}
 
-        .container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+.container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
 
-        .formula-bar {
-            background: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+.formula-bar {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-        .cell-reference {
-            background: white;
-            border: 1px solid #d0d0d0;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: bold;
-            min-width: 60px;
-            text-align: center;
-            border-radius: 3px;
-        }
+.cell-reference {
+    background: white;
+    border: 1px solid #d0d0d0;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
+    border-radius: 3px;
+}
 
-        .formula-input {
-            flex: 1;
-            border: 1px solid #d0d0d0;
-            padding: 6px 10px;
-            font-size: 13px;
-            border-radius: 3px;
-            font-family: 'Consolas', 'Monaco', monospace;
-        }
+.formula-input {
+    flex: 1;
+    border: 1px solid #d0d0d0;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
 
-        .formula-input:focus {
-            outline: none;
-            border-color: #0078d4;
-            box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
-        }
+.formula-input:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
+}
 
-        .header {
-            background-color: rgba(128, 128, 128, 0.438);
-        }
+.header {
+    background-color: rgba(128, 128, 128, 0.438);
+}
 
-        .header img {
-            height: 25px;
-            margin-left: 10px;
-            padding: 4px;
-        }
+.header img {
+    height: 25px;
+    margin-left: 10px;
+    padding: 4px;
+}
 
-        .grid-container {
-            position: relative;
-            overflow: auto;
-            background: white;
-            flex: 1;
-        }
+.grid-container {
+    position: relative;
+    overflow: auto;
+    background: white;
+    flex: 1;
+}
 
-        /* Important: remove padding/margin that pushes canvas over scrollbars */
-        #grid-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            display: block;
-            border: none;
-            outline: none;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-        }
+#grid-canvas {
+    display: block;
+    cursor: cell;
+    border: none;
+    outline: none;
+}
 
+.cell-input {
+    position: absolute;
+    border: 2px solid #137E43;
+    background: white;
+    font: 13px 'Arial';
+    padding: 2px 6px;
+    z-index: 1000;
+    resize: none;
+    outline: none;
+}
 
-        .cell-input {
-            position: absolute;
-            border: 2px solid #137E43;
-            background: white;
-            font: 13px 'Arial';
-            padding: 2px 6px;
-            z-index: 1000;
-            resize: none;
-            outline: none;
-        }
+.footer {
+    background-color: rgba(128, 128, 128, 0.438);
+}
 
-        .footer {
-            background-color: rgba(128, 128, 128, 0.438);
-        }
-        
-        .footer img {
-            height: 25px;
-            margin-left: 10px;
-            padding: 4px;
-        }
+.footer img {
+    height: 25px;
+    margin-left: 10px;
+    padding: 4px;
+}
 
-        @media (max-width: 768px) {
-            .formula-bar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-
-            .cell-reference {
-                align-self: flex-start;
-            }
-        }
+@media (max-width: 768px) {
+    .formula-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .cell-reference {
+        align-self: flex-start;
+    }
+}
     </style>
 </head>
 
@@ -140,7 +132,7 @@
         </div>
 
         <div class="grid-container" id="gridContainer">
-            <canvas id="grid-canvas" tabindex="0"></canvas>
+            <canvas id="grid-canvas"></canvas>
         </div>
 
         <!-- <div class="footer">
@@ -208,1330 +200,1053 @@
  * @method drawHeaders() - Draws row and column headers.
  * @method drawSelection() - Draws selected range and active cell border.
  */
-        class sheetManager {
-            /**
-             * constructor
-             * @param {*String} canvasId id of canvas div
-             * @param {*number} rows number of rows
-             * @param {*number} cols number of columns
-             */
-            constructor(canvasId, rows, cols) {
-                this.container = document.getElementById('grid-container');
-                this.canvas = document.getElementById(canvasId);
-                this.ctx = this.canvas.getContext('2d');
-                this.dpr = window.devicePixelRatio || 1;
+class sheetManager {
+    /**
+     * constructor
+     * @param {*String} canvasId id of canvas div
+     * @param {*number} rows number of rows
+     * @param {*number} cols number of columns
+     */
+    constructor(canvasId, rows, cols) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.dpr = window.devicePixelRatio || 1;
+        this.container = this.canvas.parentElement;
 
-                this.cellData = new CellData(rows, cols);
-                this.selection = new SelectionManager();
-                this.commandManager = new CommandManager();
+        this.cellData = new CellData(rows, cols);
+        this.selection = new SelectionManager();
+        this.commandManager = new CommandManager();
 
-                this.scrollX = 0;
-                this.scrollY = 0;
-                this.viewportWidth = 0;
-                this.viewportHeight = 0;
+        this.viewportWidth = 0;
+        this.viewportHeight = 0;
 
-                this.headerHeight = 30;
-                this.headerWidth = 80;
+        this.headerHeight = 30;
+        this.headerWidth = 80;
 
-                this.isEditing = false;
-                this.isDragging = false;
-                this.isResizing = false;
-                this.resizeType = null;
-                this.resizeIndex = -1;
-                this.resizeStartPos = 0;
-                this.resizeStartSize = 0;
+        this.isEditing = false;
+        this.isDragging = false;
+        this.isResizing = false;
+        this.resizeType = null;
+        this.resizeIndex = -1;
+        this.resizeStartPos = 0;
+        this.resizeStartSize = 0;
 
-                this.cellEditor = null;
+        this.cellEditor = null;
 
-                this.setupCanvas();
+        this.setupCanvas();
+        this.setupEventListeners();
+        this.generateSampleData();
+        this.render();
+        this.updateCellReference();
+    }
 
-                this.container.addEventListener('scroll', () => {
-                    this.scrollX = this.container.scrollLeft;
-                    this.scrollY = this.container.scrollTop;
-                    this.render();
-                });
 
-                this.setupEventListeners();
-                this.generateSampleData();
+    setupCanvas() {
+        // Calculate total dimensions needed for the grid
+        let totalWidth = this.headerWidth;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = this.headerHeight;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        // Set canvas size to total grid size to enable native scrollbars
+        this.canvas.width = totalWidth * this.dpr;
+        this.canvas.height = totalHeight * this.dpr;
+        this.canvas.style.width = totalWidth + 'px';
+        this.canvas.style.height = totalHeight + 'px';
+
+        // Get viewport dimensions
+        const containerRect = this.container.getBoundingClientRect();
+        this.viewportWidth = containerRect.width;
+        this.viewportHeight = containerRect.height;
+
+        this.ctx.scale(this.dpr, this.dpr);
+        this.ctx.translate(0.5, 0.5);
+        this.ctx.textBaseline = 'middle';
+        this.ctx.textAlign = 'left';
+    }
+
+    setupEventListeners() {
+        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+
+        // Remove custom wheel handler to allow native scrolling
+        // this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+
+        window.addEventListener('resize', this.handleResize.bind(this));
+
+        // Listen for scroll events on the container
+        this.container.addEventListener('scroll', this.handleScroll.bind(this));
+
+        this.setupFormulaInputEvents();
+    }
+
+    handleScroll(e) {
+        // Update our internal scroll tracking when user scrolls
+        this.scrollX = this.container.scrollLeft;
+        this.scrollY = this.container.scrollTop;
+        this.render();
+    }
+
+    setupFormulaInputEvents() {
+        const formulaInput = document.getElementById('formulaInput');
+        if (formulaInput) {
+            formulaInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.commitEdit(formulaInput.value);
+                    formulaInput.blur();
+                    this.canvas.focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.cancelEdit();
+                    formulaInput.blur();
+                    this.canvas.focus();
+                }
+            });
+
+            formulaInput.addEventListener('focus', () => {
+                this.isEditing = true;
+            });
+
+            formulaInput.addEventListener('blur', () => {
+                if (this.isEditing) {
+                    this.commitEdit(formulaInput.value);
+                }
+            });
+        }
+    }
+
+    generateSampleData() {
+        const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
+        headers.forEach((header, col) => {
+            this.cellData.setCell(0, col, header);
+        });
+
+        const fnames = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram'];
+        const lnames = ['Kumar', 'Sharma', 'Patel', 'Gupta', 'Singh'];
+
+        for (let row = 1; row <= 1000; row++) {
+            this.cellData.setCell(row, 0, row);
+            this.cellData.setCell(row, 1, fnames[Math.floor(Math.random() * fnames.length)]);
+            this.cellData.setCell(row, 2, lnames[Math.floor(Math.random() * lnames.length)]);
+            this.cellData.setCell(row, 3, Math.floor(Math.random() * 40) + 22);
+            this.cellData.setCell(row, 4, Math.floor(Math.random() * 100000) + 30000);
+        }
+    }
+
+    /**
+     * 
+     * @param {*number} x x position of row/columnn
+     * @param {*number} y y position of row/columnn
+     * @returns object which returns resize type is row/column and row/column's index
+     */
+    getResizeInfo(x, y) {
+        const tolerance = 5;
+
+        if (y <= this.headerHeight && x >= this.headerWidth) {
+            let currentX = this.headerWidth;
+            for (let col = 0; col < this.cellData.cols; col++) {
+                currentX += this.cellData.getColWidth(col);
+                if (Math.abs(x - currentX) <= tolerance) {
+                    return {
+                        type: 'col',
+                        index: col
+                    };
+                }
+            }
+        }
+
+        if (x <= this.headerWidth && y >= this.headerHeight) {
+            let currentY = this.headerHeight;
+            for (let row = 0; row < this.cellData.rows; row++) {
+                currentY += this.cellData.getRowHeight(row);
+                if (Math.abs(y - currentY) <= tolerance) {
+                    return {
+                        type: 'row',
+                        index: row
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
+     * @param {*number} x cusrsor's x position
+     * @param {*number} y cursor's y position
+     */
+    updateCursor(x, y) {
+        const resizeInfo = this.getResizeInfo(x, y);
+        if (resizeInfo) {
+            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
+        } else {
+            this.canvas.style.cursor = 'cell';
+        }
+    }
+
+    /**
+     * Handles the mouse down event on the canvas.
+     * @param {*MouseEvent} e The mouse event object triggered on mousedown.
+     * @returns {void}
+     */
+    handleMouseDown(e) {
+        this.canvas.focus();
+        this.hideCellEditor();
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const resizeInfo = this.getResizeInfo(x, y);
+        if (resizeInfo) {
+            this.isResizing = true;
+            this.resizeType = resizeInfo.type;
+            this.resizeIndex = resizeInfo.index;
+            this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
+            this.resizeStartSize = resizeInfo.type === 'col' ?
+                this.cellData.getColWidth(resizeInfo.index) :
+                this.cellData.getRowHeight(resizeInfo.index);
+            return;
+        }
+
+        const cellPos = this.getCellFromPoint(x, y);
+        if (cellPos) {
+            if (e.shiftKey) {
+                this.selection.updateSelection(cellPos.row, cellPos.col);
+            } else {
+                this.selection.startSelection(cellPos.row, cellPos.col);
+                this.isDragging = true;
+            }
+            this.updateCellReference();
+            this.render();
+        }
+
+        e.preventDefault();
+        this.selection.selectedRanges = [];
+        this.render();
+    }
+
+    /**
+     * Handles the mouse move event on the canvas.
+     * @param {*MouseEvent} e The mouse event object triggered on mouseMove
+     * @returns {void}
+     */
+
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (this.isResizing) {
+            const currentPos = this.resizeType === 'col' ? x : y;
+            const delta = currentPos - this.resizeStartPos;
+            const newSize = Math.max(30, this.resizeStartSize + delta);
+
+            if (this.resizeType === 'col') {
+                this.cellData.setColWidth(this.resizeIndex, newSize);
+            } else {
+                this.cellData.setRowHeight(this.resizeIndex, newSize);
+            }
+
+            // Recalculate canvas size when resizing
+            this.setupCanvas();
+            this.render();
+            return;
+        }
+
+        if (this.isDragging) {
+            const cellPos = this.getCellFromPoint(x, y);
+            if (cellPos) {
+                this.selection.updateSelection(cellPos.row, cellPos.col);
                 this.render();
-                this.updateCellReference();
             }
+        } else {
+            this.updateCursor(x, y);
+        }
+    }
 
-            setupCanvas() {
-                const totalWidth = this.cellData.colWidths.reduce((a, b) => a + b, 0) + this.headerWidth;
-                const totalHeight = this.cellData.rowHeights.reduce((a, b) => a + b, 0) + this.headerHeight;
+    /**
+     * The mouse event object triggered on mouse up
+     * @param {*MouseEvent} e The mouse event object triggered on mouseUp
+     */
+    handleMouseUp(e) {
+        if (this.isResizing) {
+            this.isResizing = false;
+            this.resizeType = null;
+            this.resizeIndex = -1;
+        }
 
-                this.canvas.width = totalWidth * this.dpr;
-                this.canvas.height = totalHeight * this.dpr;
-                this.canvas.style.width = totalWidth + 'px';
-                this.canvas.style.height = totalHeight + 'px';
+        if (this.isDragging) {
+            this.selection.endSelection();
+            this.isDragging = false;
+        }
+    }
 
-                this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                this.ctx.scale(this.dpr, this.dpr);
-                this.ctx.translate(0.5, 0.5);
+    /**
+     * Handles the double click event on the canvas.
+     * @param {*mouseEvent} e The mouse event object triggered on double click
+     */
+    handleDoubleClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-                this.viewportWidth = this.container.clientWidth;
-                this.viewportHeight = this.container.clientHeight;
-            }
+        const cellPos = this.getCellFromPoint(x, y);
+        if (cellPos) {
+            this.showCellEditor(cellPos.row, cellPos.col);
+        }
+    }
 
-            setupEventListeners() {
-                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-                this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-                this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-                this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+    /**
+     * show the input box over the selected cell
+     * @param {*index} row selected cell's row's index
+     * @param {*index} col selceted cell's column's index
+     */
+    showCellEditor(row, col) {
+        this.hideCellEditor();
 
-                document.addEventListener('keydown', this.handleKeyDown.bind(this));
-                document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-                document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        const cell = this.cellData.getCell(row, col);
+        const rect = this.getCellRect(row, col);
 
-                window.addEventListener('resize', this.handleResize.bind(this));
+        const editor = document.createElement('input');
+        editor.type = 'text';
+        editor.className = 'cell-input';
+        editor.value = cell.value || '';
 
-                this.setupFormulaInputEvents();
-            }
+        // Adjust position relative to the container and account for scroll
+        editor.style.left = (rect.x - this.container.scrollLeft) + 'px';
+        editor.style.top = (rect.y - this.container.scrollTop) + 'px';
+        editor.style.width = (rect.width) + 'px';
+        editor.style.height = (rect.height) + 'px';
 
-            setupFormulaInputEvents() {
-                const formulaInput = document.getElementById('formulaInput');
-                if (formulaInput) {
-                    formulaInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            this.commitEdit(formulaInput.value);
-                            formulaInput.blur();
-                            this.canvas.focus();
-                        } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            this.cancelEdit();
-                            formulaInput.blur();
-                            this.canvas.focus();
-                        }
-                    });
+        this.canvas.parentElement.appendChild(editor);
+        this.cellEditor = editor;
 
-                    formulaInput.addEventListener('focus', () => {
-                        this.isEditing = true;
-                    });
+        editor.focus();
+        editor.select();
 
-                    formulaInput.addEventListener('blur', () => {
-                        if (this.isEditing) {
-                            this.commitEdit(formulaInput.value);
-                        }
-                    });
-                }
-            }
-
-            generateSampleData() {
-                const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
-                headers.forEach((header, col) => {
-                    this.cellData.setCell(0, col, header);
-                });
-
-                const fnames = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram'];
-                const lnames = ['Kumar', 'Sharma', 'Patel', 'Gupta', 'Singh'];
-
-                for (let row = 1; row <= 1000; row++) {
-                    this.cellData.setCell(row, 0, row);
-                    this.cellData.setCell(row, 1, fnames[Math.floor(Math.random() * fnames.length)]);
-                    this.cellData.setCell(row, 2, lnames[Math.floor(Math.random() * lnames.length)]);
-                    this.cellData.setCell(row, 3, Math.floor(Math.random() * 40) + 22);
-                    this.cellData.setCell(row, 4, Math.floor(Math.random() * 100000) + 30000);
-                }
-            }
-
-            /**
-             * 
-             * @param {*number} x x position of row/columnn
-             * @param {*number} y y position of row/columnn
-             * @returns object which returns resize type is row/column and row/column's index
-             */
-            getResizeInfo(x, y) {
-                const tolerance = 5;
-
-                if (y <= this.headerHeight && x >= this.headerWidth) {
-                    let currentX = this.headerWidth - this.scrollX;
-                    for (let col = 0; col < this.cellData.cols; col++) {
-                        currentX += this.cellData.getColWidth(col);
-                        if (Math.abs(x - currentX) <= tolerance) {
-                            return {
-                                type: 'col',
-                                index: col
-                            };
-                        }
-                    }
-                }
-
-                if (x <= this.headerWidth && y >= this.headerHeight) {
-                    let currentY = this.headerHeight - this.scrollY;
-                    for (let row = 0; row < this.cellData.rows; row++) {
-                        currentY += this.cellData.getRowHeight(row);
-                        if (Math.abs(y - currentY) <= tolerance) {
-                            return {
-                                type: 'row',
-                                index: row
-                            };
-                        }
-                    }
-                }
-
-                return null;
-            }
-
-            /**
-             * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
-             * @param {*number} x cusrsor's x position
-             * @param {*number} y cursor's y position
-             */
-            updateCursor(x, y) {
-                const resizeInfo = this.getResizeInfo(x, y);
-                if (resizeInfo) {
-                    this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
-                } else {
-                    this.canvas.style.cursor = 'cell';
-                }
-            }
-
-            /**
-             * Handles the mouse down event on the canvas.
-             * @param {*MouseEvent} e The mouse event object triggered on mousedown.
-             * @returns {void}
-             */
-            handleMouseDown(e) {
-                this.canvas.focus();
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.commitCellEdit(row, col, editor.value);
                 this.hideCellEditor();
+                this.canvas.focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.hideCellEditor();
+                this.canvas.focus();
+            }
+        });
 
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+        editor.addEventListener('blur', () => {
+            this.commitCellEdit(row, col, editor.value);
+            this.hideCellEditor();
+        });
+    }
 
-                const resizeInfo = this.getResizeInfo(x, y);
-                if (resizeInfo) {
-                    this.isResizing = true;
-                    this.resizeType = resizeInfo.type;
-                    this.resizeIndex = resizeInfo.index;
-                    this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
-                    this.resizeStartSize = resizeInfo.type === 'col' ?
-                        this.cellData.getColWidth(resizeInfo.index) :
-                        this.cellData.getRowHeight(resizeInfo.index);
-                    return;
-                }
+    hideCellEditor() {
+        if (this.cellEditor) {
+            this.cellEditor.remove();
+            this.cellEditor = null;
+        }
+    }
 
-                const cellPos = this.getCellFromPoint(x, y);
-                if (cellPos) {
-                    if (e.shiftKey) {
-                        this.selection.updateSelection(cellPos.row, cellPos.col);
-                    } else {
-                        this.selection.startSelection(cellPos.row, cellPos.col);
-                        this.isDragging = true;
-                    }
-                    this.updateCellReference();
-                    this.render();
-                }
+    /**
+     * update the enterd value in selected cell
+     * @param {*number/index} row selected cell's row's index
+     * @param {*number/index} col selected cell's column's index
+     * @param {*string} value value of selected cell
+     */
+    commitCellEdit(row, col, value) {
+        const oldCell = this.cellData.getCell(row, col);
+        const oldValue = oldCell.value || '';
 
+        if (value !== oldValue) {
+            const command = new SetCellValueCommand(this, row, col, value, oldValue);
+            this.commandManager.execute(command);
+            this.render();
+        }
+
+        this.updateCellReference();
+    }
+
+    /**
+     * Handles the key down event on the canvas.
+     * @param {*keybordEvent} e The keyboard event object triggered on key press
+     * @returns {void}
+     */
+    handleKeyDown(e) {
+        if (this.isEditing || this.cellEditor) return;
+
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key.toLowerCase()) {
+                case 'z':
+                    e.preventDefault();
+                    if (e.shiftKey) this.redo();
+                    else this.undo();
+                    break;
+                case 'y':
+                    e.preventDefault();
+                    this.redo();
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    this.copy();
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    this.paste();
+                    break;
+                case 'x':
+                    e.preventDefault();
+                    this.cut();
+                    break;
+            }
+            return;
+        }
+
+        const {
+            row,
+            col
+        } = this.selection.activeCell;
+        let newRow = row;
+        let newCol = col;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                e.preventDefault();
+                newRow = Math.max(0, row - 1);
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                newRow = Math.min(this.cellData.rows - 1, row + 1);
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                newCol = Math.max(0, col - 1);
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                newCol = Math.min(this.cellData.cols - 1, col + 1);
+                break;
+            case 'Enter':
+            case 'F2':
+                e.preventDefault();
+                this.showCellEditor(row, col);
+                return;
+            case 'Delete':
+            case 'Backspace':
+                e.preventDefault();
+                this.clearSelectedCells();
+                return;
+            case 'Escape':
                 e.preventDefault();
                 this.selection.selectedRanges = [];
                 this.render();
-            }
-
-            /**
-             * Handles the mouse move event on the canvas.
-             * @param {*MouseEvent} e The mouse event object triggered on mouseMove
-             * @returns {void}
-             */
-
-            handleMouseMove(e) {
-                if (this.isScrollbarDragging) {
-                    if (this.scrollbarDragType === 'horizontal') {
-                        const deltaX = e.clientX - this.scrollbarDragStart;
-                        const scrollbarWidth = this.viewportWidth - this.headerWidth;
-
-                        let totalWidth = 0;
-                        for (let col = 0; col < this.cellData.cols; col++) {
-                            totalWidth += this.cellData.getColWidth(col);
+                return;
+            default:
+                if (e.key.length === 1 && !e.altKey) {
+                    this.showCellEditor(row, col);
+                    setTimeout(() => {
+                        if (this.cellEditor) {
+                            this.cellEditor.value = e.key;
+                            this.cellEditor.setSelectionRange(1, 1);
                         }
-
-                        const maxScroll = Math.max(0, totalWidth - scrollbarWidth);
-                        this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalWidth)));
-
-                    } else if (this.scrollbarDragType === 'vertical') {
-                        const deltaY = e.clientY - this.scrollbarDragStart;
-                        const scrollbarHeight = this.viewportHeight - this.headerHeight;
-
-                        let totalHeight = 0;
-                        for (let row = 0; row < this.cellData.rows; row++) {
-                            totalHeight += this.cellData.getRowHeight(row);
-                        }
-
-                        const maxScroll = Math.max(0, totalHeight - scrollbarHeight);
-                        const scrollRatio = deltaY / scrollbarHeight;
-                        this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalHeight)));
-                    }
-
-                    this.render();
+                    }, 0);
                     return;
                 }
-
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                if (this.isResizing) {
-                    const currentPos = this.resizeType === 'col' ? x : y;
-                    const delta = currentPos - this.resizeStartPos;
-                    const newSize = Math.max(30, this.resizeStartSize + delta);
-
-                    if (this.resizeType === 'col') {
-                        this.cellData.setColWidth(this.resizeIndex, newSize);
-                    } else {
-                        this.cellData.setRowHeight(this.resizeIndex, newSize);
-                    }
-
-                    this.render();
-                    return;
-                }
-
-                if (this.isDragging) {
-                    const cellPos = this.getCellFromPoint(x, y);
-                    if (cellPos) {
-                        this.selection.updateSelection(cellPos.row, cellPos.col);
-                        this.render();
-                    }
-                } else {
-                    this.updateCursor(x, y);
-                }
-            }
-
-            /**
-             * The mouse event object triggered on mouse up
-             * @param {*MouseEvent} e The mouse event object triggered on mouseUp
-             */
-            handleMouseUp(e) {
-                if (this.isScrollbarDragging) {
-                    this.isScrollbarDragging = false;
-                    this.scrollbarDragType = null;
-                }
-
-                if (this.isResizing) {
-                    this.isResizing = false;
-                    this.resizeType = null;
-                    this.resizeIndex = -1;
-                }
-
-                if (this.isDragging) {
-                    this.selection.endSelection();
-                    this.isDragging = false;
-                }
-            }
-
-            /**
-             * Handles the double click event on the canvas.
-             * @param {*mouseEvent} e The mouse event object triggered on double click
-             */
-            handleDoubleClick(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const cellPos = this.getCellFromPoint(x, y);
-                if (cellPos) {
-                    this.showCellEditor(cellPos.row, cellPos.col);
-                }
-            }
-
-            /**
-             * show the input box over the selected cell
-             * @param {*index} row selected cell's row's index
-             * @param {*index} col selceted cell's column's index
-             */
-            showCellEditor(row, col) {
-                this.hideCellEditor();
-
-                const cell = this.cellData.getCell(row, col);
-                const rect = this.getCellRect(row, col);
-
-                const editor = document.createElement('input');
-                editor.type = 'text';
-                editor.className = 'cell-input';
-                editor.value = cell.value || '';
-
-                editor.style.left = (rect.x) + 'px';
-                editor.style.top = (rect.y) + 'px';
-                editor.style.width = (rect.width) + 'px';
-                editor.style.height = (rect.height) + 'px';
-
-                this.canvas.parentElement.appendChild(editor);
-                this.cellEditor = editor;
-
-                editor.focus();
-                editor.select();
-
-                editor.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.commitCellEdit(row, col, editor.value);
-                        this.hideCellEditor();
-                        this.canvas.focus();
-                    } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        this.hideCellEditor();
-                        this.canvas.focus();
-                    }
-                });
-
-                editor.addEventListener('blur', () => {
-                    this.commitCellEdit(row, col, editor.value);
-                    this.hideCellEditor();
-                });
-            }
-
-            hideCellEditor() {
-                if (this.cellEditor) {
-                    this.cellEditor.remove();
-                    this.cellEditor = null;
-                }
-            }
-
-            /**
-             * update the enterd value in selected cell
-             * @param {*number/index} row selected cell's row's index
-             * @param {*number/index} col selected cell's column's index
-             * @param {*string} value value of selected cell
-             */
-            commitCellEdit(row, col, value) {
-                const oldCell = this.cellData.getCell(row, col);
-                const oldValue = oldCell.value || '';
-
-                if (value !== oldValue) {
-                    const command = new SetCellValueCommand(this, row, col, value, oldValue);
-                    this.commandManager.execute(command);
-                    this.render();
-                }
-
-                this.updateCellReference();
-            }
-
-            /**
-             * Handles the mouse scroll event on the canvas.
-             * @param {*mousEvent} e The mouse event object triggered on mouse scroll
-             */
-            handleWheel(e) {
-
-                const scrollSpeed = 150;
-                if (e.shiftKey) {
-                    this.scrollX = Math.max(0, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
-                } else {
-                    this.scrollY = Math.max(0, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
-                }
-                this.render();
-            }
-
-            /**
-             * Handles the key down event on the canvas.
-             * @param {*keybordEvent} e The keyboard event object triggered on key press
-             * @returns {void}
-             */
-            handleKeyDown(e) {
-                if (this.isEditing || this.cellEditor) return;
-
-                if (e.ctrlKey || e.metaKey) {
-                    switch (e.key.toLowerCase()) {
-                        case 'z':
-                            e.preventDefault();
-                            if (e.shiftKey) this.redo();
-                            else this.undo();
-                            break;
-                        case 'y':
-                            e.preventDefault();
-                            this.redo();
-                            break;
-                        case 'c':
-                            e.preventDefault();
-                            this.copy();
-                            break;
-                        case 'v':
-                            e.preventDefault();
-                            this.paste();
-                            break;
-                        case 'x':
-                            e.preventDefault();
-                            this.cut();
-                            break;
-                    }
-                    return;
-                }
-
-                const {
-                    row,
-                    col
-                } = this.selection.activeCell;
-                let newRow = row;
-                let newCol = col;
-
-                switch (e.key) {
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        newRow = Math.max(0, row - 1);
-                        break;
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        newRow = Math.min(this.cellData.rows - 1, row + 1);
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        newCol = Math.max(0, col - 1);
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        newCol = Math.min(this.cellData.cols - 1, col + 1);
-                        break;
-                    case 'Enter':
-                    case 'F2':
-                        e.preventDefault();
-                        this.showCellEditor(row, col);
-                        return;
-                    case 'Delete':
-                    case 'Backspace':
-                        e.preventDefault();
-                        this.clearSelectedCells();
-                        return;
-                    case 'Escape':
-                        e.preventDefault();
-                        this.selection.selectedRanges = [];
-                        this.render();
-                        return;
-                    default:
-                        if (e.key.length === 1 && !e.altKey) {
-                            this.showCellEditor(row, col);
-                            setTimeout(() => {
-                                if (this.cellEditor) {
-                                    this.cellEditor.value = e.key;
-                                    this.cellEditor.setSelectionRange(1, 1);
-                                }
-                            }, 0);
-                            return;
-                        }
-                }
-
-                if (newRow !== row || newCol !== col) {
-                    this.selection.setActiveCell(newRow, newCol);
-                    this.selection.setActiveCell(newRow, newCol);
-                    this.cellDisplay(newRow, newCol);
-                    this.updateCellReference();
-                    this.render();
-                }
-            }
-
-            handleResize() {
-                this.setupCanvas();
-                this.render();
-            }
-
-            /**
-             * change the value of selected cell
-             * @param {*string} value text/content of selected cell
-             */
-            commitEdit(value) {
-                const {
-                    row,
-                    col
-                } = this.selection.activeCell;
-                const oldCell = this.cellData.getCell(row, col);
-                const oldValue = oldCell.value || '';
-
-                if (value !== oldValue) {
-                    const command = new SetCellValueCommand(this, row, col, value, oldValue);
-                    this.commandManager.execute(command);
-                    this.updateFormulaBar();
-                    this.render();
-                }
-
-                this.isEditing = false;
-            }
-
-            cancelEdit() {
-                this.isEditing = false;
-                this.updateFormulaBar();
-            }
-
-            updateFormulaBar() {
-                const formulaInput = document.getElementById('formulaInput');
-                if (formulaInput) {
-                    const {
-                        row,
-                        col
-                    } = this.selection.activeCell;
-                    const cell = this.cellData.getCell(row, col);
-                    formulaInput.value = cell.value || '';
-                }
-            }
-
-            undo() {
-                if (this.commandManager.undo()) {
-                    this.updateCellReference();
-                    this.updateFormulaBar();
-                    this.render();
-                }
-            }
-
-            redo() {
-                if (this.commandManager.redo()) {
-                    this.updateCellReference();
-                    this.updateFormulaBar();
-                    this.render();
-                }
-            }
-
-            clearSelectedCells() {
-                const cells = this.selection.getSelectedCells();
-                cells.forEach(pos => {
-                    const oldCell = this.cellData.getCell(pos.row, pos.col);
-                    if (oldCell.value) {
-                        const command = new ClearCellCommand(this, pos.row, pos.col, oldCell.value);
-                        this.commandManager.execute(command);
-                    }
-                });
-                this.updateFormulaBar();
-                this.render();
-            }
-
-            /**
-             * set the cell value
-             * @param {*number/index} row selected cell's row's index
-             * @param {*number/index} col selected cell's column's index
-             * @param {*string} value value of selected cell
-             */
-            setCellValueDirect(row, col, value) {
-                if (value === '' || value == null) {
-                    this.cellData.deleteCell(row, col);
-                } else {
-                    this.cellData.setCell(row, col, value);
-                }
-            }
-
-            /**
-             * getter method for column
-             * @param {*string} col column index
-             * @returns spexific number of column converted from string
-             */
-            getColumnName(col) {
-                let name = '';
-                col++;
-                while (col > 0) {
-                    col--;
-                    name = String.fromCharCode(65 + (col % 26)) + name;
-                    col = Math.floor(col / 26);
-                }
-                return name;
-            }
-
-            updateCellReference() {
-                const cellRef = document.getElementById('cellReference');
-                if (cellRef) {
-                    const {
-                        row,
-                        col
-                    } = this.selection.activeCell;
-                    cellRef.textContent = this.getColumnName(col) + (row + 1);
-                }
-                this.updateFormulaBar();
-            }
-
-            /**
-             * from the cursor point it get cell
-             * @param {number*} x x position of cursor on screen
-             * @param {*number} y y position of cursor on screen
-             * @returns an object which returns row and column index of cell
-             */
-            getCellFromPoint(x, y) {
-                if (x < this.headerWidth || y < this.headerHeight) return null;
-
-                let currentY = this.headerHeight - this.scrollY;
-                let row = -1;
-                for (let r = 0; r < this.cellData.rows; r++) {
-                    const height = this.cellData.getRowHeight(r);
-                    if (y >= currentY && y < currentY + height) {
-                        row = r;
-                        break;
-                    }
-                    currentY += height;
-                }
-
-                let currentX = this.headerWidth - this.scrollX;
-                let col = -1;
-                for (let c = 0; c < this.cellData.cols; c++) {
-                    const width = this.cellData.getColWidth(c);
-                    if (x >= currentX && x < currentX + width) {
-                        col = c;
-                        break;
-                    }
-                    currentX += width;
-                }
-
-                return (row >= 0 && col >= 0) ? {
-                    row,
-                    col
-                } : null;
-            }
-
-            /**
-             * get the cell's rectangel from row and column
-             * @param {*number} row 
-             * @param {*number} col 
-             * @returns an obejet which has cell's height, width, x and y co-ordinate
-             */
-            getCellRect(row, col) {
-                let x = this.headerWidth - this.scrollX;
-                for (let c = 0; c < col; c++) {
-                    x += this.cellData.getColWidth(c);
-                }
-
-                let y = this.headerHeight - this.scrollY;
-                for (let r = 0; r < row; r++) {
-                    y += this.cellData.getRowHeight(r);
-                }
-
-                return {
-                    x: x,
-                    y: y,
-                    width: this.cellData.getColWidth(col),
-                    height: this.cellData.getRowHeight(row)
-                };
-            }
-
-            /**
-             * from the row and column display the cell
-             * @param {*number/index} row row's column
-             * @param {*number/index} col cell's column 
-             */
-            cellDisplay(row, col) {
-                const rect = this.getCellRect(row, col);
-
-                if (rect.x < this.headerWidth) {
-                    this.scrollX = Math.max(0, this.scrollX - (this.headerWidth - rect.x));
-                } else if (rect.x + rect.width > this.viewportWidth) {
-                    this.scrollX += (rect.x + rect.width - this.viewportWidth);
-                }
-
-                if (rect.y < this.headerHeight) {
-                    this.scrollY = Math.max(0, this.scrollY - (this.headerHeight - rect.y));
-                } else if (rect.y + rect.height > this.viewportHeight) {
-                    this.scrollY += (rect.y + rect.height - this.viewportHeight);
-                }
-            }
-
-            render() {
-                const ctx = this.ctx;
-                ctx.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
-
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
-
-                this.drawGrid();
-                this.drawCells();
-                this.drawHeaders();
-                this.drawSelection();
-            }
-
-
-            drawGrid() {
-                this.ctx.strokeStyle = '#e0e0e0';
-                this.ctx.lineWidth = 1;
-                this.ctx.beginPath();
-
-                // Horizontal lines
-                let y = this.headerHeight - this.scrollY;
-                for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
-                    const height = this.cellData.getRowHeight(row);
-                    y += height;
-                    if (y >= this.headerHeight) {
-                        this.ctx.moveTo(this.headerWidth, y);
-                        this.ctx.lineTo(this.viewportWidth, y);
-                    }
-                }
-
-                // Vertical lines
-                let x = this.headerWidth - this.scrollX;
-                for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
-                    const width = this.cellData.getColWidth(col);
-                    x += width;
-                    if (x >= this.headerWidth) {
-                        this.ctx.moveTo(x, this.headerHeight);
-                        this.ctx.lineTo(x, this.viewportHeight);
-                    }
-                }
-
-                this.ctx.stroke();
-            }
-
-            drawCells() {
-                this.ctx.font = '13px Arial';
-                this.ctx.textAlign = 'left';
-                this.ctx.textBaseline = 'middle';
-
-                let y = this.headerHeight - this.scrollY;
-                for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
-                    const height = this.cellData.getRowHeight(row);
-
-                    if (y + height >= this.headerHeight) {
-                        let x = this.headerWidth - this.scrollX;
-                        for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
-                            const width = this.cellData.getColWidth(col);
-
-                            if (x + width >= this.headerWidth) {
-                                const cell = this.cellData.getCell(row, col);
-                                if (cell.value) {
-                                    this.ctx.fillStyle = '#000000';
-                                    const displayValue = cell.getDisplayValue();
-                                    const textX = x + 6;
-                                    const textY = y + height / 2;
-
-                                    this.ctx.save();
-                                    this.ctx.beginPath();
-                                    this.ctx.rect(x, y, width, height);
-                                    this.ctx.clip();
-                                    this.ctx.fillText(displayValue, textX, textY);
-                                    this.ctx.restore();
-                                }
-                            }
-                            x += width;
-                        }
-                    }
-                    y += height;
-                }
-            }
-
-            drawHeaders() {
-                this.ctx.fillStyle = '#f8f9fa';
-                this.ctx.strokeStyle = '#d0d0d0';
-                this.ctx.lineWidth = 1;
-
-                // Draw column headers
-                this.ctx.fillRect(this.headerWidth, 0, this.viewportWidth - this.headerWidth, this.headerHeight);
-
-                let x = this.headerWidth - this.scrollX;
-                for (let col = 0; col < this.cellData.cols && x < this.viewportWidth; col++) {
-                    const width = this.cellData.getColWidth(col);
-                    if (x + width >= this.headerWidth) {
-                        // Draw header border
-                        this.ctx.beginPath();
-                        this.ctx.rect(x, 0, width, this.headerHeight);
-                        this.ctx.stroke();
-
-                        // Draw header text
-                        this.ctx.fillStyle = '#000000';
-                        this.ctx.font = 'bold 12px Arial';
-                        this.ctx.textAlign = 'center';
-                        this.ctx.fillText(this.getColumnName(col), x + width / 2, this.headerHeight / 2);
-                    }
-                    x += width;
-                }
-
-                // Draw row headers
-                this.ctx.fillStyle = '#f8f9fa';
-                this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
-
-                let y = this.headerHeight - this.scrollY;
-                for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
-                    const height = this.cellData.getRowHeight(row);
-                    if (y + height >= this.headerHeight) {
-                        // Draw header border
-                        this.ctx.beginPath();
-                        this.ctx.rect(0, y, this.headerWidth, height);
-                        this.ctx.stroke();
-
-                        // Draw header text
-                        this.ctx.fillStyle = '#000000';
-                        this.ctx.font = 'bold 12px Arial';
-                        this.ctx.textAlign = 'center';
-                        this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
-                    }
-                    y += height;
-                }
-
-                // Draw corner
-                this.ctx.fillStyle = '#f8f9fa';
-                this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
-                this.ctx.beginPath();
-                this.ctx.rect(0, 0, this.headerWidth, this.headerHeight);
-                this.ctx.stroke();
-            }
-
-            drawSelection() {
-                this.ctx.strokeStyle = '#137E43';
-                this.ctx.lineWidth = 2;
-                this.ctx.fillStyle = 'rgba(19, 126, 67, 0.1)';
-
-                this.selection.selectedRanges.forEach(range => {
-                    const startRect = this.getCellRect(range.startRow, range.startCol);
-                    const endRect = this.getCellRect(range.endRow, range.endCol);
-
-                    const x = startRect.x;
-                    const y = startRect.y;
-                    const width = endRect.x + endRect.width - startRect.x;
-                    const height = endRect.y + endRect.height - startRect.y;
-
-                    this.ctx.fillRect(x, y, width, height);
-
-                    this.ctx.beginPath();
-                    this.ctx.rect(x, y, width, height);
-                    this.ctx.stroke();
-                });
-
-                const activeRect = this.getCellRect(this.selection.activeCell.row, this.selection.activeCell.col);
-                this.ctx.strokeStyle = '#137E43';
-                this.ctx.lineWidth = 2;
-                this.ctx.beginPath();
-                this.ctx.rect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
-                this.ctx.stroke();
-            }
         }
 
-        /**
-         * abstract class 
-         * @method execute() - Executes the command logic. Must be implemented in subclass.
-         * @method undo() - Reverts the command logic. Must be implemented in subclass.
-         * @method getDescription() - Returns a string description of the command (optional override).
-         */
-        class Command {
-            execute() {
-                throw new Error('Must implement execute');
-            }
-            undo() {
-                throw new Error('Must implement undo');
-            }
-            getDescription() {
-                return 'Command';
-            }
+        if (newRow !== row || newCol !== col) {
+            this.selection.setActiveCell(newRow, newCol);
+            this.selection.setActiveCell(newRow, newCol);
+            this.cellDisplay(newRow, newCol);
+            this.updateCellReference();
+            this.render();
+        }
+    }
+
+    handleResize() {
+        this.setupCanvas();
+        this.render();
+    }
+
+    /**
+     * change the value of selected cell
+     * @param {*string} value text/content of selected cell
+     */
+    commitEdit(value) {
+        const {
+            row,
+            col
+        } = this.selection.activeCell;
+        const oldCell = this.cellData.getCell(row, col);
+        const oldValue = oldCell.value || '';
+
+        if (value !== oldValue) {
+            const command = new SetCellValueCommand(this, row, col, value, oldValue);
+            this.commandManager.execute(command);
+            this.updateFormulaBar();
+            this.render();
         }
 
+        this.isEditing = false;
+    }
 
-        /**
-         * @method constructer take the grid reference row and column to track the cell and change the value of the cell
-         * @method execute() - Clears the cell content by setting its value to an empty string.
-         * @method undo() - Restores the old value of the cell (undoes the clear operation).
-         * @method getDescription() - Returns a string description like "Clear B2" for logging or UI.
-         */
-        class SetCellValueCommand extends Command {
-            /**
-             * constructer which set data 
-             * @param {*object} grid reference of grid or cell
-             * @param {*number} row cell row index
-             * @param {*number} col cell column index
-             * @param {*number} newValue new value of cell
-             * @param {*number} oldValue old value of cell
-             */
-            constructor(grid, row, col, newValue, oldValue) {
-                super();
-                this.grid = grid;
-                this.row = row;
-                this.col = col;
-                this.newValue = newValue;
-                this.oldValue = oldValue;
-            }
+    cancelEdit() {
+        this.isEditing = false;
+        this.updateFormulaBar();
+    }
 
-            execute() {
-                this.grid.setCellValueDirect(this.row, this.col, this.newValue);
-            }
-
-            undo() {
-                this.grid.setCellValueDirect(this.row, this.col, this.oldValue);
-            }
-
-            getDescription() {
-                const colName = this.grid.getColumnName(this.col);
-                return `Set ${colName}${this.row + 1}`;
-            }
+    updateFormulaBar() {
+        const formulaInput = document.getElementById('formulaInput');
+        if (formulaInput) {
+            const {
+                row,
+                col
+            } = this.selection.activeCell;
+            const cell = this.cellData.getCell(row, col);
+            formulaInput.value = cell.value || '';
         }
+    }
 
-        /**
-         * * @constructor
-         * @param {object} grid - Reference to the sheetManager instance for cell manipulation.
-         * @param {number} row - The row index of the cell to be cleared.
-         * @param {number} col - The column index of the cell to be cleared.
-         * @param {string} oldValue - The previous value of the cell before it was cleared.
-         * 
-         * @method execute() - Clears the cell content by setting its value to an empty string.
-         * @method undo() - Restores the old value of the cell (undoes the clear operation).
-         * @method getDescription() - Returns a string description like "Clear B2" for logging or UI.
-         */
-        class ClearCellCommand extends Command {
-            /**
-             * constucter which stores the value of cell's metadata
-             * @param {object} grid reference f grid or cell
-             * @param {*number} row row number
-             * @param {*number} col column number
-             * @param {*String} oldValue cell value
-             */
-            constructor(grid, row, col, oldValue) {
-                super();
-                this.grid = grid;
-                this.row = row;
-                this.col = col;
-                this.oldValue = oldValue;
-            }
-
-            execute() {
-                this.grid.setCellValueDirect(this.row, this.col, '');
-            }
-
-            undo() {
-                this.grid.setCellValueDirect(this.row, this.col, this.oldValue);
-            }
-
-            getDescription() {
-                const colName = this.grid.getColumnName(this.col);
-                return `Clear ${colName}${this.row + 1}`;
-            }
+    undo() {
+        if (this.commandManager.undo()) {
+            this.updateCellReference();
+            this.updateFormulaBar();
+            this.render();
         }
+    }
 
-        /**
-         * @property {Array<Command>} undoStack - Stack of commands for undo operations.
-         * @property {Array<Command>} redoStack - Stack of commands for redo operations.
-         * @property {number} maxHistorySize - Maximum number of commands stored in undo history.
-         * 
-         * @constructor Initializes the undo/redo stacks and sets the history size limit.
-         * 
-         * @method execute(command: Command): void  
-         * Executes a command, pushes it to the undo stack, and clears the redo stack.
-         * 
-         * @method undo(): boolean  
-         * Undoes the last executed command and moves it to the redo stack.  
-         * Returns `true` if successful, `false` if no commands are available.
-         * 
-         * @method redo(): boolean  
-         * Re-executes the last undone command and moves it back to the undo stack.  
-         * Returns `true` if successful, `false` if no commands are available.
-         * 
-         * @method canUndo(): boolean  
-         * Returns `true` if there are commands available to undo.
-         * 
-         * @method canRedo(): boolean  
-         * Returns `true` if there are commands available to redo.
-         */
-        class CommandManager {
-            constructor() {
-                this.undoStack = [];
-                this.redoStack = [];
-                this.maxHistorySize = 100;
-            }
-
-            /**
-             * 
-             * @param {*object} command key stroke command 
-             */
-            execute(command) {
-                command.execute();
-                this.undoStack.push(command);
-                this.redoStack = [];
-
-                if (this.undoStack.length > this.maxHistorySize) {
-                    this.undoStack.shift();
-                }
-            }
-
-            undo() {
-                if (this.undoStack.length > 0) {
-                    const command = this.undoStack.pop();
-                    command.undo();
-                    this.redoStack.push(command);
-                    return true;
-                }
-                return false;
-            }
-
-            redo() {
-                if (this.redoStack.length > 0) {
-                    const command = this.redoStack.pop();
-                    command.execute();
-                    this.undoStack.push(command);
-                    return true;
-                }
-                return false;
-            }
-
-            canUndo() {
-                return this.undoStack.length > 0;
-            }
-
-            canRedo() {
-                return this.redoStack.length > 0;
-            }
+    redo() {
+        if (this.commandManager.redo()) {
+            this.updateCellReference();
+            this.updateFormulaBar();
+            this.render();
         }
+    }
 
-        /**
-         * @constructor from the canvas create a cell
-         * @method detectType check the type of cell
-         * @method getDisplayValue check the type of value and convert it according to it
-         */
-        class Cell {
-            /**
-             * 
-             * @param {number} row row number
-             * @param {*number} col column number
-             * @param {*String} value cell's value or inputed text
-             */
-            constructor(row, col, value = '') {
-                this.row = row;
-                this.col = col;
-                this.value = value;
-                this.type = this.detectType(value);
-                this.formula = null;
-                this.format = null;
+    clearSelectedCells() {
+        const cells = this.selection.getSelectedCells();
+        cells.forEach(pos => {
+            const oldCell = this.cellData.getCell(pos.row, pos.col);
+            if (oldCell.value) {
+                const command = new ClearCellCommand(this, pos.row, pos.col, oldCell.value);
+                this.commandManager.execute(command);
             }
-
-            /**
-             * 
-             * @param {*string/number} value cell's value
-             * @returns type of data is it number string or empty cell
-             */
-            detectType(value) {
-                if (value === '' || value == null) return 'empty';
-                if (!isNaN(value) && !isNaN(parseFloat(value))) return 'number';
-                return 'text';
-            }
-
-            getDisplayValue() {
-                switch (this.type) {
-                    case 'number':
-                        return parseFloat(this.value).toLocaleString();
-                    default:
-                        return this.value.toString();
-                }
-            }
-        }
-
-        /**
-         * @constructor create map of data size and also create an array of rows and column's height
-         * @method getCell return the cell's data's key of map
-         * @method setCell change the cell's value and update it into map
-         * @method deleteCell delete the cell's data and also remove from the map
-         * @method getRowHeight get the height of cell
-         * @method setRowHeight change the height of cell also changes it in row height array
-         * @method getColWidth get widht of column
-         * @method setColWidth set/ change the width of column also changes it in column widht array
-         * @method getAllCells return all cell data from map
-         */
-        class CellData {
-            /**
-             * 
-             * @param {number} rows row number
-             * @param {*number} cols column number
-             */
-            constructor(rows, cols) {
-                this.rows = rows;
-                this.cols = cols;
-                this.data = new Map();
-                this.rowHeights = new Array(rows).fill(25);
-                this.colWidths = new Array(cols).fill(100);
-                this.frozenRows = 0;
-                this.frozenCols = 0;
-            }
-
-            /**
-             * get the cell data from map
-             * @param {*number} row 
-             * @param {*number} col 
-             * @returns key of map for find the cell data
-             */
-            getCell(row, col) {
-                const key = `${row},${col}`;
-                return this.data.get(key) || new Cell(row, col);
-            }
-
-            /**
-             * for set cell data and store it in map
-             * @param {*number} row index of row
-             * @param {*number} col index of column
-             * @param {*string} value cell value
-             * @returns cell object
-             */
-            setCell(row, col, value) {
-                const key = `${row},${col}`;
-                const cell = new Cell(row, col, value);
-                this.data.set(key, cell);
-                return cell;
-            }
-
-            /**
-             * for deleting the cell data
-             * @param {*number} row index of row
-             * @param {*number} col index of column
-             */
-            deleteCell(row, col) {
-                const key = `${row},${col}`;
-                this.data.delete(key);
-            }
-
-            /**
-             * returns the height of row
-             * @param {*number} row index of row 
-             * @returns height of row by default returns 25 
-             */
-            getRowHeight(row) {
-                return this.rowHeights[row] || 25;
-            }
-
-            /**
-             * set the height of row
-             * @param {*number} row index of row 
-             * @param {*number} height new height of row 
-             */
-            setRowHeight(row, height) {
-                this.rowHeights[row] = Math.max(15, height);
-            }
-
-            /**
-             * returns the width of column
-             * @param {*number} col index of column
-             * @returns widhth of column by default returns 100
-             */
-            getColWidth(col) {
-                return this.colWidths[col] || 100;
-            }
-
-            /**
-             * set the widht of column
-             * @param {*number} col index of column 
-             * @param {*number} widhth new width of column
-             */
-            setColWidth(col, width) {
-                this.colWidths[col] = Math.max(30, width);
-            }
-
-            getAllCells() {
-                const cells = [];
-                for (const [key, cell] of this.data) {
-                    cells.push(cell);
-                }
-                return cells;
-            }
-        }
-
-        /**
-         * @property {{row: number, col: number}} activeCell - The currently focused cell.
-         * @property {Array<Object>} selectedRanges - Array of selection ranges containing start and end coordinates.
-         * @property {boolean} isSelecting - Indicates whether a drag selection is in progress.
-         * @property {?{row: number, col: number}} selectionStart - Starting point of a drag selection.
-         * @property {?Array<Object>} copiedCells - Stores copied cell references for clipboard operations.
-         * 
-         * @constructor  Initializes the selection state and active cell to the top-left corner.
-         * 
-         * @method setActiveCell(row: number, col: number): Sets the current active cell and clears any multi-cell selections.
-         * 
-         * @method startSelection(row: number, col: number): Begins a drag selection from the specified cell. Marks it as active and stores the starting point.
-         * 
-         * @method updateSelection(row: number, col: number):  Updates the selection range dynamically based on current cursor position during dragging.
-         * Returns early if selection is not active.
-         * 
-         * @method endSelection(): Ends an ongoing selection operation and resets selection start.
-         * 
-         * @method isSelected(row: number, col: number): Checks whether the specified cell is part of any selected range.
-         * 
-         * @method getSelectedCells():  Returns a flat array of all selected cell coordinates.
-         */
-        class SelectionManager {
-            constructor() {
-                this.activeCell = {
-                    row: 0,
-                    col: 0
-                };
-                this.selectedRanges = [];
-                this.isSelecting = false;
-                this.selectionStart = null;
-                this.copiedCells = null;
-            }
-
-            /**
-             * set the selected cell
-             * @param {*number} row row of active selectd cell
-             * @param {*number} col column of active selectd cell
-             */
-            setActiveCell(row, col) {
-                this.activeCell = {
-                    row,
-                    col
-                };
-                this.selectedRanges = [{
-                    startRow: row,
-                    startCol: col,
-                    endRow: row,
-                    endCol: col
-                }];
-            }
-
-            /**
-             * on selection start it willl set the start and end selection row column
-             * @param {*number} row last selected cell's row
-             * @param {*number} col last selected cell's column
-             */
-            startSelection(row, col) {
-                this.isSelecting = true;
-                this.selectionStart = {
-                    row,
-                    col
-                };
-                this.activeCell = {
-                    row,
-                    col
-                };
-            }
-
-            /**
-             * based on mouse move select the cell
-             * @param {*number} row selected cell's row
-             * @param {*number} col selected cell's column
-             * @returns if not selecting area
-             */
-            updateSelection(row, col) {
-                if (!this.isSelecting) return;
-
-                this.selectedRanges = [{
-                    startRow: Math.min(this.selectionStart.row, row),
-                    startCol: Math.min(this.selectionStart.col, col),
-                    endRow: Math.max(this.selectionStart.row, row),
-                    endCol: Math.max(this.selectionStart.col, col)
-                }];
-            }
-
-            endSelection() {
-                this.isSelecting = false;
-                this.selectionStart = null;
-            }
-
-            /**
-             * return true if cell is in selected else false
-             * @param {*number} row row index of cell
-             * @param {*number} col column index of cell
-             * @returns boolean if the cell with given row and column is selected or not
-             */
-            isSelected(row, col) {
-                return this.selectedRanges.some(range =>
-                    row >= range.startRow && row <= range.endRow &&
-                    col >= range.startCol && col <= range.endCol
-                );
-            }
-
-
-            getSelectedCells() {
-                const cells = [];
-                this.selectedRanges.forEach(range => {
-                    for (let row = range.startRow; row <= range.endRow; row++) {
-                        for (let col = range.startCol; col <= range.endCol; col++) {
-                            cells.push({
-                                row,
-                                col
-                            });
-                        }
-                    }
-                });
-                return cells;
-            }
-        }
-
-        const grid = new sheetManager('grid-canvas', 100000, 500);
-
-        document.addEventListener('DOMContentLoaded', () => {
-            grid.canvas.focus();
         });
+        this.updateFormulaBar();
+        this.render();
+    }
+
+    /**
+     * set the cell value
+     * @param {*number/index} row selected cell's row's index
+     * @param {*number/index} col selected cell's column's index
+     * @param {*string} value value of selected cell
+     */
+    setCellValueDirect(row, col, value) {
+        if (value === '' || value == null) {
+            this.cellData.deleteCell(row, col);
+        } else {
+            this.cellData.setCell(row, col, value);
+        }
+    }
+
+    /**
+     * getter method for column
+     * @param {*string} col column index
+     * @returns spexific number of column converted from string
+     */
+    getColumnName(col) {
+        let name = '';
+        col++;
+        while (col > 0) {
+            col--;
+            name = String.fromCharCode(65 + (col % 26)) + name;
+            col = Math.floor(col / 26);
+        }
+        return name;
+    }
+
+    updateCellReference() {
+        const cellRef = document.getElementById('cellReference');
+        if (cellRef) {
+            const {
+                row,
+                col
+            } = this.selection.activeCell;
+            cellRef.textContent = this.getColumnName(col) + (row + 1);
+        }
+        this.updateFormulaBar();
+    }
+
+    /**
+     * from the cursor point it get cell
+     * @param {number*} x x position of cursor on screen
+     * @param {*number} y y position of cursor on screen
+     * @returns an object which returns row and column index of cell
+     */
+    getCellFromPoint(x, y) {
+        if (x < this.headerWidth || y < this.headerHeight) return null;
+
+        let currentY = this.headerHeight;
+        let row = -1;
+        for (let r = 0; r < this.cellData.rows; r++) {
+            const height = this.cellData.getRowHeight(r);
+            if (y >= currentY && y < currentY + height) {
+                row = r;
+                break;
+            }
+            currentY += height;
+        }
+
+        let currentX = this.headerWidth;
+        let col = -1;
+        for (let c = 0; c < this.cellData.cols; c++) {
+            const width = this.cellData.getColWidth(c);
+            if (x >= currentX && x < currentX + width) {
+                col = c;
+                break;
+            }
+            currentX += width;
+        }
+
+        return (row >= 0 && col >= 0) ? {
+            row,
+            col
+        } : null;
+    }
+
+    /**
+     * get the cell's rectangel from row and column
+     * @param {*number} row 
+     * @param {*number} col 
+     * @returns an obejet which has cell's height, width, x and y co-ordinate
+     */
+    getCellRect(row, col) {
+        let x = this.headerWidth;
+        for (let c = 0; c < col; c++) {
+            x += this.cellData.getColWidth(c);
+        }
+
+        let y = this.headerHeight;
+        for (let r = 0; r < row; r++) {
+            y += this.cellData.getRowHeight(r);
+        }
+
+        return {
+            x: x,
+            y: y,
+            width: this.cellData.getColWidth(col),
+            height: this.cellData.getRowHeight(row)
+        };
+    }
+
+    /**
+     * Scrolls the viewport to bring a specific cell into view
+     * @param {number} row - Row index of the cell
+     * @param {number} col - Column index of the cell
+     */
+    cellDisplay(row, col) {
+        const rect = this.getCellRect(row, col);
+        
+        // Check if cell is visible in current viewport
+        const scrollLeft = this.container.scrollLeft;
+        const scrollTop = this.container.scrollTop;
+        const viewportRight = scrollLeft + this.viewportWidth;
+        const viewportBottom = scrollTop + this.viewportHeight;
+
+        // Scroll horizontally if needed
+        if (rect.x < scrollLeft) {
+            this.container.scrollLeft = rect.x;
+        } else if (rect.x + rect.width > viewportRight) {
+            this.container.scrollLeft = rect.x + rect.width - this.viewportWidth;
+        }
+
+        // Scroll vertically if needed
+        if (rect.y < scrollTop) {
+            this.container.scrollTop = rect.y;
+        } else if (rect.y + rect.height > viewportBottom) {
+            this.container.scrollTop = rect.y + rect.height - this.viewportHeight;
+        }
+    }
+
+    /**
+     * Main rendering function that draws everything
+     */
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
+        this.drawGrid();
+        this.drawCells();
+        this.drawHeaders();
+        this.drawSelection();
+    }
+
+    /**
+     * Draws the grid lines
+     */
+    drawGrid() {
+        this.ctx.strokeStyle = '#d0d0d0';
+        this.ctx.lineWidth = 1;
+
+        // Draw vertical lines
+        let x = this.headerWidth;
+        for (let col = 0; col <= this.cellData.cols; col++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height / this.dpr);
+            this.ctx.stroke();
+            if (col < this.cellData.cols) {
+                x += this.cellData.getColWidth(col);
+            }
+        }
+
+        // Draw horizontal lines
+        let y = this.headerHeight;
+        for (let row = 0; row <= this.cellData.rows; row++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width / this.dpr, y);
+            this.ctx.stroke();
+            if (row < this.cellData.rows) {
+                y += this.cellData.getRowHeight(row);
+            }
+        }
+    }
+
+    /**
+     * Draws cell contents
+     */
+    drawCells() {
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = '13px Arial';
+
+        let y = this.headerHeight;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            let x = this.headerWidth;
+            const rowHeight = this.cellData.getRowHeight(row);
+
+            for (let col = 0; col < this.cellData.cols; col++) {
+                const colWidth = this.cellData.getColWidth(col);
+                const cell = this.cellData.getCell(row, col);
+
+                if (cell.value != null) {
+                    this.ctx.fillText(
+                        String(cell.value),
+                        x + 6,
+                        y + rowHeight / 2
+                    );
+                }
+
+                x += colWidth;
+            }
+            y += rowHeight;
+        }
+    }
+
+    /**
+     * Draws row and column headers
+     */
+    drawHeaders() {
+        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
+        this.ctx.fillRect(0, 0, this.canvas.width / this.dpr, this.headerHeight);
+        this.ctx.fillRect(0, 0, this.headerWidth, this.canvas.height / this.dpr);
+
+        this.ctx.fillStyle = '#333';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+
+        // Draw column headers
+        let x = this.headerWidth;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            const colWidth = this.cellData.getColWidth(col);
+            this.ctx.fillText(
+                this.getColumnName(col),
+                x + colWidth / 2,
+                this.headerHeight / 2
+            );
+            x += colWidth;
+        }
+
+        // Draw row headers
+        let y = this.headerHeight;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            const rowHeight = this.cellData.getRowHeight(row);
+            this.ctx.fillText(
+                String(row + 1),
+                this.headerWidth / 2,
+                y + rowHeight / 2
+            );
+            y += rowHeight;
+        }
+
+        this.ctx.textAlign = 'left';
+    }
+
+    /**
+     * Draws selection highlight and active cell border
+     */
+    drawSelection() {
+        const {row, col} = this.selection.activeCell;
+        
+        // Draw active cell border
+        const rect = this.getCellRect(row, col);
+        this.ctx.strokeStyle = '#137E43';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+        // Draw selection ranges
+        this.ctx.fillStyle = 'rgba(19, 126, 67, 0.1)';
+        this.selection.selectedRanges.forEach(range => {
+            const startRect = this.getCellRect(range.startRow, range.startCol);
+            const endRect = this.getCellRect(range.endRow, range.endCol);
+            
+            this.ctx.fillRect(
+                startRect.x,
+                startRect.y,
+                endRect.x + endRect.width - startRect.x,
+                endRect.y + endRect.height - startRect.y
+            );
+        });
+
+        this.ctx.lineWidth = 1;
+    }
+
+    // Clipboard operations
+    copy() {
+        const cells = this.selection.getSelectedCells();
+        const data = cells.map(pos => {
+            const cell = this.cellData.getCell(pos.row, pos.col);
+            return cell.value || '';
+        });
+        
+        // Store in a simple way for demo purposes
+        this.clipboardData = {
+            data: data,
+            cells: cells
+        };
+    }
+
+    paste() {
+        if (!this.clipboardData) return;
+        
+        const {row, col} = this.selection.activeCell;
+        this.clipboardData.cells.forEach((cellPos, index) => {
+            const targetRow = row + (cellPos.row - this.clipboardData.cells[0].row);
+            const targetCol = col + (cellPos.col - this.clipboardData.cells[0].col);
+            
+            if (targetRow < this.cellData.rows && targetCol < this.cellData.cols) {
+                const value = this.clipboardData.data[index];
+                const command = new SetCellValueCommand(this, targetRow, targetCol, value, '');
+                this.commandManager.execute(command);
+            }
+        });
+        
+        this.render();
+    }
+
+    cut() {
+        this.copy();
+        this.clearSelectedCells();
+    }
+}
+
+/**
+ * Manages cell data storage and dimensions
+ */
+class CellData {
+    constructor(rows, cols) {
+        this.rows = rows;
+        this.cols = cols;
+        this.cells = new Map();
+        this.colWidths = new Array(cols).fill(100);
+        this.rowHeights = new Array(rows).fill(25);
+    }
+
+    getCell(row, col) {
+        const key = `${row},${col}`;
+        return this.cells.get(key) || { value: null };
+    }
+
+    setCell(row, col, value) {
+        const key = `${row},${col}`;
+        this.cells.set(key, { value: value });
+    }
+
+    deleteCell(row, col) {
+        const key = `${row},${col}`;
+        this.cells.delete(key);
+    }
+
+    getColWidth(col) {
+        return this.colWidths[col] || 100;
+    }
+
+    setColWidth(col, width) {
+        this.colWidths[col] = width;
+    }
+
+    getRowHeight(row) {
+        return this.rowHeights[row] || 25;
+    }
+
+    setRowHeight(row, height) {
+        this.rowHeights[row] = height;
+    }
+}
+
+/**
+ * Manages cell selection and active cell
+ */
+class SelectionManager {
+    constructor() {
+        this.activeCell = { row: 0, col: 0 };
+        this.selectedRanges = [];
+        this.selectionStart = null;
+    }
+
+    setActiveCell(row, col) {
+        this.activeCell = { row, col };
+        this.selectedRanges = [];
+    }
+
+    startSelection(row, col) {
+        this.activeCell = { row, col };
+        this.selectionStart = { row, col };
+        this.selectedRanges = [];
+    }
+
+    updateSelection(row, col) {
+        if (this.selectionStart) {
+            const startRow = Math.min(this.selectionStart.row, row);
+            const endRow = Math.max(this.selectionStart.row, row);
+            const startCol = Math.min(this.selectionStart.col, col);
+            const endCol = Math.max(this.selectionStart.col, col);
+
+            this.selectedRanges = [{
+                startRow, startCol, endRow, endCol
+            }];
+        }
+    }
+
+    endSelection() {
+        this.selectionStart = null;
+    }
+
+    getSelectedCells() {
+        const cells = [];
+        
+        if (this.selectedRanges.length === 0) {
+            cells.push(this.activeCell);
+        } else {
+            this.selectedRanges.forEach(range => {
+                for (let row = range.startRow; row <= range.endRow; row++) {
+                    for (let col = range.startCol; col <= range.endCol; col++) {
+                        cells.push({ row, col });
+                    }
+                }
+            });
+        }
+        
+        return cells;
+    }
+}
+
+/**
+ * Command pattern for undo/redo functionality
+ */
+class CommandManager {
+    constructor() {
+        this.commands = [];
+        this.currentIndex = -1;
+    }
+
+    execute(command) {
+        // Remove any commands after current index
+        this.commands = this.commands.slice(0, this.currentIndex + 1);
+        this.commands.push(command);
+        this.currentIndex++;
+        command.execute();
+    }
+
+    undo() {
+        if (this.currentIndex >= 0) {
+            this.commands[this.currentIndex].undo();
+            this.currentIndex--;
+            return true;
+        }
+        return false;
+    }
+
+    redo() {
+        if (this.currentIndex < this.commands.length - 1) {
+            this.currentIndex++;
+            this.commands[this.currentIndex].execute();
+            return true;
+        }
+        return false;
+    }
+}
+
+/**
+ * Command to set cell value
+ */
+class SetCellValueCommand {
+    constructor(sheetManager, row, col, newValue, oldValue) {
+        this.sheetManager = sheetManager;
+        this.row = row;
+        this.col = col;
+        this.newValue = newValue;
+        this.oldValue = oldValue;
+    }
+
+    execute() {
+        this.sheetManager.setCellValueDirect(this.row, this.col, this.newValue);
+    }
+
+    undo() {
+        this.sheetManager.setCellValueDirect(this.row, this.col, this.oldValue);
+    }
+}
+
+/**
+ * Command to clear cell
+ */
+class ClearCellCommand {
+    constructor(sheetManager, row, col, oldValue) {
+        this.sheetManager = sheetManager;
+        this.row = row;
+        this.col = col;
+        this.oldValue = oldValue;
+    }
+
+    execute() {
+        this.sheetManager.setCellValueDirect(this.row, this.col, '');
+    }
+
+    undo() {
+        this.sheetManager.setCellValueDirect(this.row, this.col, this.oldValue);
+    }
+}
+
+// Initialize the spreadsheet
+const sheet = new sheetManager('grid-canvas', 100, 100);
+
     </script>
 </body>
-
 </html>
