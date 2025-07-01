@@ -81,6 +81,13 @@ export class SheetManager {
         this.selection.maxCols = cols;
         this.commandManager = new CommandManager();
 
+        this.scrollbarWidth = 10;
+        this.scrollbarHeight = 10;
+        this.isScrollbarDragging = false;
+        this.scrollbarDragType = null;
+        this.scrollbarDragStart = 0;
+        this.scrollbarInitialScroll = 0;
+
         this.scrollX = 0;
         this.scrollY = 0;
         this.viewportWidth = 0;
@@ -99,6 +106,10 @@ export class SheetManager {
 
         this.cellEditor = null;
 
+        this.autoScrollInterval = null;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+
         this.setupCanvas();
         this.setupEventListeners();
         this.generateSampleData();
@@ -111,8 +122,8 @@ export class SheetManager {
         const container = this.canvas.parentElement;
         const rect = container.getBoundingClientRect();
 
-        this.viewportWidth = rect.width - 10;
-        this.viewportHeight = rect.height - 10;
+        this.viewportWidth = rect.width - 1;
+        this.viewportHeight = rect.height - 1;
 
         this.dpr = window.devicePixelRatio || 1;
 
@@ -128,17 +139,14 @@ export class SheetManager {
         this.ctx.textAlign = 'left';
     }
 
+    /** */
     setupEventListeners() {
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
         this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
 
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-
+        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
         window.addEventListener('resize', this.handleResize.bind(this));
 
         this.setupFormulaInputEvents();
@@ -209,7 +217,7 @@ export class SheetManager {
         });
 
         const stats = {
-            count: stringVal,
+            count: numericValues.length > 0 ? stringVal : 0,
             sum: 0,
             average: 0,
             min: 0,
@@ -239,6 +247,157 @@ export class SheetManager {
         document.getElementById('statusMax').textContent = stats.count > 0 ? stats.max.toLocaleString() : '0';
     }
 
+    drawScrollbars() {
+        const scrollbarColor = '#C1C1C1';
+        const scrollbarTrackColor = '#E7E7E7';
+        const scrollbarHoverColor = '#A8A8A8';
+
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth;
+        const contentHeight = this.viewportHeight;
+
+        const needsHorizontalScrollbar = totalWidth > contentWidth;
+        const needsVerticalScrollbar = totalHeight > contentHeight;
+
+        const availableContentWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
+        const availableContentHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
+
+        // Draw horizontal scrollbar
+        if (totalWidth > contentWidth) {
+            const trackWidth = availableContentWidth;
+            const trackX = 0;
+            const trackY = this.viewportHeight - this.scrollbarHeight;
+
+            // Draw track
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(trackX, trackY, trackWidth, this.scrollbarHeight);
+
+            // Calculate thumb size and position
+            const thumbWidth = Math.max(20, (contentWidth / totalWidth) * trackWidth);
+            const maxScroll = Math.max(0, totalWidth - contentWidth);
+            const thumbX = trackX + (this.scrollX / maxScroll) * (trackWidth - thumbWidth);
+
+            // Draw thumb
+            this.ctx.fillStyle = scrollbarColor;
+            this.ctx.fillRect(thumbX, trackY + 2, thumbWidth, this.scrollbarHeight - 4);
+
+            // Add subtle borders
+            this.ctx.strokeStyle = '#999999';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(thumbX, trackY + 2, thumbWidth, this.scrollbarHeight - 4);
+        }
+
+        // Draw vertical scrollbar
+        if (totalHeight > contentHeight) {
+            const trackHeight = availableContentHeight;
+            const trackX = this.viewportWidth - this.scrollbarWidth;
+            const trackY = 0;
+
+            // Draw track
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(trackX, trackY, this.scrollbarWidth, trackHeight);
+
+            // Calculate thumb size and position
+            const thumbHeight = Math.max(20, (contentHeight / totalHeight) * trackHeight);
+            const maxScroll = Math.max(0, totalHeight - contentHeight);
+            const thumbY = trackY + (this.scrollY / maxScroll) * (trackHeight - thumbHeight);
+
+            // Draw thumb
+            this.ctx.fillStyle = scrollbarColor;
+            this.ctx.fillRect(trackX + 2, thumbY, this.scrollbarWidth - 4, thumbHeight);
+
+            // Add subtle borders
+            this.ctx.strokeStyle = '#999999';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(trackX + 2, thumbY, this.scrollbarWidth - 4, thumbHeight);
+        }
+
+        // Draw corner (where scrollbars meet)
+        if (needsHorizontalScrollbar && needsVerticalScrollbar) {
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(
+                this.viewportWidth - this.scrollbarWidth,
+                this.viewportHeight - this.scrollbarHeight,
+                this.scrollbarWidth,
+                this.scrollbarHeight
+            );
+        }
+    }
+
+    /**
+     * 
+     * @param {*} x 
+     * @param {*} y 
+     * @returns 
+     */
+    getScrollbarInfo(x, y) {
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth;
+        const contentHeight = this.viewportHeight;
+
+        // Check horizontal scrollbar
+        if (totalWidth > contentWidth) {
+            const trackWidth = contentWidth - this.scrollbarWidth;
+            const trackX = 0;
+            const trackY = this.viewportHeight - this.scrollbarHeight;
+
+            if (x >= trackX && x <= trackX + trackWidth &&
+                y >= trackY && y <= trackY + this.scrollbarHeight) {
+
+                const thumbWidth = Math.max(20, (contentWidth / totalWidth) * trackWidth);
+                const maxScroll = Math.max(0, totalWidth - contentWidth);
+                const thumbX = trackX + (this.scrollX / maxScroll) * (trackWidth - thumbWidth);
+
+                if (x >= thumbX && x <= thumbX + thumbWidth) {
+                    return { type: 'horizontal', part: 'thumb' };
+                } else {
+                    return { type: 'horizontal', part: 'track' };
+                }
+            }
+        }
+        // Check vertical scrollbar
+        if (totalHeight > contentHeight) {
+            const trackHeight = contentHeight - this.scrollbarHeight;
+            const trackX = this.viewportWidth - this.scrollbarWidth;
+            const trackY = 0;
+
+            if (x >= trackX && x <= trackX + this.scrollbarWidth &&
+                y >= trackY && y <= trackY + trackHeight) {
+
+                const thumbHeight = Math.max(20, (contentHeight / totalHeight) * trackHeight);
+                const maxScroll = Math.max(0, totalHeight - contentHeight);
+                const thumbY = trackY + (this.scrollY / maxScroll) * (trackHeight - thumbHeight);
+
+                if (y >= thumbY && y <= thumbY + thumbHeight) {
+                    return { type: 'vertical', part: 'thumb' };
+                } else {
+                    return { type: 'vertical', part: 'track' };
+                }
+            }
+        }
+        return null;
+    }
+
     generateSampleData() {
         const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
         headers.forEach((header, col) => {
@@ -248,7 +407,7 @@ export class SheetManager {
         const fnames = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram'];
         const lnames = ['Kumar', 'Sharma', 'Patel', 'Gupta', 'Singh'];
 
-        for (let row = 1; row <= 1000; row++) {
+        for (let row = 1; row <= 50000; row++) {
             this.cellData.setCell(row, 0, row);
             this.cellData.setCell(row, 1, fnames[Math.floor(Math.random() * fnames.length)]);
             this.cellData.setCell(row, 2, lnames[Math.floor(Math.random() * lnames.length)]);
@@ -302,8 +461,11 @@ export class SheetManager {
      */
     updateCursor(x, y) {
         const resizeInfo = this.getResizeInfo(x, y);
+        const scrollbarInfo = this.getScrollbarInfo(x, y);
         if (resizeInfo) {
             this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
+        } else if (scrollbarInfo) {
+            this.canvas.style.cursor = 'pointer';
         } else {
             this.canvas.style.cursor = 'cell';
         }
@@ -322,6 +484,28 @@ export class SheetManager {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        const scrollbarInfo = this.getScrollbarInfo(x, y);
+        if (scrollbarInfo && scrollbarInfo.part === 'thumb') {
+            this.isScrollbarDragging = true;
+            this.scrollbarDragType = scrollbarInfo.type;
+            this.scrollbarDragStart = scrollbarInfo.type === 'horizontal' ? e.clientX : e.clientY;
+            this.scrollbarInitialScroll = scrollbarInfo.type === 'horizontal' ? this.scrollX : this.scrollY;
+            return;
+        } else if (scrollbarInfo && scrollbarInfo.part === 'track') {
+            // Handle track clicks (page up/down behavior)
+            if (scrollbarInfo.type === 'horizontal') {
+                const contentWidth = this.viewportWidth - this.headerWidth;
+                this.scrollX += x < (this.viewportWidth - this.scrollbarWidth / 2) ? -contentWidth * 0.8 : contentWidth * 0.8;
+                this.scrollX = Math.max(0, this.scrollX);
+            } else {
+                const contentHeight = this.viewportHeight - this.headerHeight;
+                this.scrollY += y < (this.viewportHeight - this.scrollbarHeight / 2) ? -contentHeight * 0.8 : contentHeight * 0.8;
+                this.scrollY = Math.max(0, this.scrollY);
+            }
+            this.render();
+            return;
+        }
+
         const resizeInfo = this.getResizeInfo(x, y);
         if (resizeInfo) {
             this.isResizing = true;
@@ -338,8 +522,9 @@ export class SheetManager {
         if (y <= this.headerHeight && x >= this.headerWidth) {
             const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
             if (cellPos) {
-                this.selection.selectCol(cellPos.col);
-                this.updateCellReference()
+                const isMultiSelect = e.ctrlKey || e.metaKey;
+                this.selection.selectCol(cellPos.col, isMultiSelect);
+                this.updateCellReference();
                 this.render();
                 return;
             }
@@ -349,7 +534,8 @@ export class SheetManager {
         if (x <= this.headerWidth && y >= this.headerHeight) {
             const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
             if (cellPos) {
-                this.selection.selectRow(cellPos.row);
+                const isMultiSelect = e.ctrlKey || e.metaKey;
+                this.selection.selectRow(cellPos.row, isMultiSelect);
                 this.updateCellReference();
                 this.render();
                 return;
@@ -363,6 +549,7 @@ export class SheetManager {
             } else {
                 this.selection.startSelection(cellPos.row, cellPos.col);
                 this.isDragging = true;
+                this.autoScrollInterval = setInterval(() => this.autoScrollSelection(), 25);
             }
             this.updateCellReference();
             this.render();
@@ -380,31 +567,33 @@ export class SheetManager {
      */
 
     handleMouseMove(e) {
+        this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
+
         if (this.isScrollbarDragging) {
             if (this.scrollbarDragType === 'horizontal') {
                 const deltaX = e.clientX - this.scrollbarDragStart;
-                const scrollbarWidth = this.viewportWidth - this.headerWidth;
+                const contentWidth = this.viewportWidth - this.headerWidth;
+                const needsVerticalScrollbar = this.getTotalHeight() > (this.viewportHeight - this.headerHeight);
+                const availableWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
+                const trackWidth = availableWidth;
 
-                let totalWidth = 0;
-                for (let col = 0; col < this.cellData.cols; col++) {
-                    totalWidth += this.cellData.getColWidth(col);
-                }
-
-                const maxScroll = Math.max(0, totalWidth - scrollbarWidth);
-                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalWidth)));
+                const totalWidth = this.getTotalWidth();
+                const maxScroll = Math.max(0, totalWidth - availableWidth);
+                const scrollRatio = deltaX / trackWidth;
+                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
 
             } else if (this.scrollbarDragType === 'vertical') {
                 const deltaY = e.clientY - this.scrollbarDragStart;
-                const scrollbarHeight = this.viewportHeight - this.headerHeight;
+                const contentHeight = this.viewportHeight - this.headerHeight;
+                const needsHorizontalScrollbar = this.getTotalWidth() > (this.viewportWidth - this.headerWidth);
+                const availableHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
+                const trackHeight = availableHeight;
 
-                let totalHeight = 0;
-                for (let row = 0; row < this.cellData.rows; row++) {
-                    totalHeight += this.cellData.getRowHeight(row);
-                }
-
-                const maxScroll = Math.max(0, totalHeight - scrollbarHeight);
-                const scrollRatio = deltaY / scrollbarHeight;
-                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalHeight)));
+                const totalHeight = this.getTotalHeight();
+                const maxScroll = Math.max(0, totalHeight - availableHeight);
+                const scrollRatio = deltaY / trackHeight;
+                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
             }
 
             this.render();
@@ -462,6 +651,11 @@ export class SheetManager {
             this.isDragging = false;
             this.updateStatusBar();
         }
+
+        if (this.autoScrollInterval) {
+            clearInterval(this.autoScrollInterval);
+            this.autoScrollInterval = null;
+        }
     }
 
     /**
@@ -476,6 +670,44 @@ export class SheetManager {
         const cellPos = this.getCellFromPoint(x, y);
         if (cellPos) {
             this.showCellEditor(cellPos.row, cellPos.col);
+        }
+    }
+
+    autoScrollSelection() {
+        const mouseX = this.lastMouseX;
+        const mouseY = this.lastMouseY;
+
+        const edgeThreshold = 30; // pixels from edge
+        const scrollSpeed = 20;   // pixels per tick
+
+        const rect = this.canvas.getBoundingClientRect();
+
+        let scrolled = false;
+
+        if (mouseX < rect.left + edgeThreshold) {
+            this.scrollX = Math.max(0, this.scrollX - scrollSpeed);
+            scrolled = true;
+        } else if (mouseX > rect.right - edgeThreshold) {
+            this.scrollX += scrollSpeed;
+            scrolled = true;
+        }
+
+        if (mouseY < rect.top + edgeThreshold) {
+            this.scrollY = Math.max(0, this.scrollY - scrollSpeed);
+            scrolled = true;
+        } else if (mouseY > rect.bottom - edgeThreshold) {
+            this.scrollY += scrollSpeed;
+            scrolled = true;
+        }
+
+        if (scrolled) {
+            const localX = mouseX - rect.left;
+            const localY = mouseY - rect.top;
+            const cellPos = this.getCellFromPoint(localX, localY);
+            if (cellPos) {
+                this.selection.updateSelection(cellPos.row, cellPos.col);
+            }
+            this.render();
         }
     }
 
@@ -556,12 +788,36 @@ export class SheetManager {
      * @param {*mousEvent} e The mouse event object triggered on mouse scroll
      */
     handleWheel(e) {
-
         const scrollSpeed = 150;
+
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth - this.headerWidth - this.scrollbarWidth;
+        const contentHeight = this.viewportHeight - this.headerHeight - this.scrollbarHeight;
+
+        // Only allow scrolling if content is larger than viewport
+        const maxScrollX = Math.max(0, totalWidth - contentWidth);
+        const maxScrollY = Math.max(0, totalHeight - contentHeight);
+
         if (e.shiftKey) {
-            this.scrollX = Math.max(0, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+            // Horizontal scroll
+            if (maxScrollX > 0) {
+                this.scrollX = Math.max(0, Math.min(maxScrollX, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed)));
+            }
         } else {
-            this.scrollY = Math.max(0, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+            // Vertical scroll
+            if (maxScrollY > 0) {
+                this.scrollY = Math.max(0, Math.min(maxScrollY, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed)));
+            }
         }
         this.render();
     }
@@ -643,12 +899,10 @@ export class SheetManager {
             default:
                 if (e.key.length === 1 && !e.altKey) {
                     this.showCellEditor(row, col);
-                    setTimeout(() => {
-                        if (this.cellEditor) {
-                            this.cellEditor.value = e.key;
-                            this.cellEditor.setSelectionRange(1, 1);
-                        }
-                    }, 0);
+                    if (this.cellEditor) {
+                        this.cellEditor.value = e.key;
+                        this.cellEditor.setSelectionRange(1, 1);
+                    }
                     return;
                 }
         }
@@ -769,13 +1023,20 @@ export class SheetManager {
         const cellRef = document.getElementById('cellReference');
         if (cellRef) {
             if (this.selection.selectionType === 'column') {
-                const col = this.selection.activeCell.col;
-                cellRef.textContent = this.getColumnName(col) + '1';
+                if (this.selection.selectedCols.size === 1) {
+                    const col = this.selection.activeCell.col;
+                    cellRef.textContent = this.getColumnName(col);
+                } else {
+                    cellRef.textContent = `${this.selection.selectedCols.size} columns selected`;
+                }
             }
             else if (this.selection.selectionType === 'row') {
-                const row = this.selection.activeCell.row + 1;
-                cellRef.textContent = 'A' + row;
-                console.log('row selection');
+                if (this.selection.selectedRows.size === 1) {
+                    const row = this.selection.activeCell.row + 1;
+                    cellRef.textContent = row.toString();
+                } else {
+                    cellRef.textContent = `${this.selection.selectedRows.size} rows selected`;
+                }
             }
             else {
                 const {
@@ -883,6 +1144,7 @@ export class SheetManager {
         this.drawCells();
         this.drawHeaders();
         this.drawSelection();
+        this.drawScrollbars();
     }
 
     drawGrid() {
@@ -915,10 +1177,26 @@ export class SheetManager {
         this.ctx.stroke();
     }
 
+    getTotalWidth() {
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+        return totalWidth;
+    }
+
+    getTotalHeight() {
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+        return totalHeight;
+    }
+
     drawCells() {
-        this.ctx.font = '13px Arial';
+        this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'middle';
+        this.ctx.textBaseline = 'bottom';
 
         let y = this.headerHeight - this.scrollY;
         for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
@@ -932,10 +1210,19 @@ export class SheetManager {
                     if (x + width >= this.headerWidth) {
                         const cell = this.cellData.getCell(row, col);
                         if (cell.value) {
-                            this.ctx.fillStyle = '#000000';
                             const displayValue = cell.getDisplayValue();
-                            const textX = x + 6;
-                            const textY = y + height / 2;
+                            const numericRegex = /^\s*[\d,]+(\.\d+)?\s*$/;
+                            const cleaned = displayValue.replace(/,/g, '');
+                            const isNumeric = numericRegex.test(displayValue) && !isNaN(parseFloat(cleaned));
+
+
+                            this.ctx.fillStyle = '#000000';
+                            this.ctx.textAlign = isNumeric ? 'right' : 'left';
+                            this.ctx.textBaseline = 'bottom';
+
+                            const paddingX = 6;
+                            const textX = isNumeric ? (x + width - paddingX) : (x + paddingX);
+                            const textY = y + height - 6;
 
                             this.ctx.save();
                             this.ctx.beginPath();
@@ -944,6 +1231,7 @@ export class SheetManager {
                             this.ctx.fillText(displayValue, textX, textY);
                             this.ctx.restore();
                         }
+
                     }
                     x += width;
                 }
@@ -956,6 +1244,9 @@ export class SheetManager {
         this.ctx.fillStyle = '#f8f9fa';
         this.ctx.strokeStyle = '#d0d0d0';
         this.ctx.lineWidth = 1;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+
 
         // Draw column headers
         this.ctx.fillRect(this.headerWidth, 0, this.viewportWidth - this.headerWidth, this.headerHeight);
@@ -992,8 +1283,8 @@ export class SheetManager {
                 }
 
                 // Draw header text
-                this.ctx.fillStyle = '#000000';
-                this.ctx.font = 'bold 12px Arial';
+                this.ctx.fillStyle = '#616161';
+                this.ctx.font = 'normal 12px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText(this.getColumnName(col), x + width / 2, this.headerHeight / 2);
             }
@@ -1036,12 +1327,10 @@ export class SheetManager {
                 }
 
                 // Draw header text
-                this.ctx.fillStyle = '#000000';
-                this.ctx.font = 'bold 12px Arial';
-                this.ctx.textAlign = 'right';
-                let rowHeaderDyWidth = this.ctx.measureText((row + 1).toString()).width;
-                this.ctx.fillText((row + 1).toString(), this.headerWidth - 8, y + height / 2);
-                // console.log(rowHeaderDyWidth);
+                this.ctx.fillStyle = '#616161';
+                this.ctx.font = 'normal 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
             }
             y += height;
         }

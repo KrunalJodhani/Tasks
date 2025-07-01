@@ -26,6 +26,7 @@
  * @method setupCanvas() - Prepares canvas dimensions and context with DPR scaling.
  * @method setupEventListeners() - Binds mouse, keyboard, and resize events.
  * @method setupFormulaInputEvents() - Binds events to formula input DOM element.
+ * @method detectZoomChange() - 
  * @method generateSampleData() - Fills the grid with sample data.
  * @method getResizeInfo(x,y) - Checks if cursor is near a resizable edge.
  * @method updateCursor(x,y) - Changes the cursor icon based on hover position.
@@ -57,7 +58,7 @@
  * @method drawHeaders() - Draws row and column headers.
  * @method drawSelection() - Draws selected range and active cell border.
  */
-class sheetManager {
+class SheetManager {
     /**
      * constructor
      * @param {*String} canvasId id of canvas div
@@ -74,6 +75,13 @@ class sheetManager {
         this.selection.maxRows = rows;
         this.selection.maxCols = cols;
         this.commandManager = new CommandManager();
+
+        this.scrollbarWidth = 10;
+        this.scrollbarHeight = 10;
+        this.isScrollbarDragging = false;
+        this.scrollbarDragType = null;
+        this.scrollbarDragStart = 0;
+        this.scrollbarInitialScroll = 0;
 
         this.scrollX = 0;
         this.scrollY = 0;
@@ -233,6 +241,151 @@ class sheetManager {
         document.getElementById('statusMax').textContent = stats.count > 0 ? stats.max.toLocaleString() : '0';
     }
 
+    drawScrollbars() {
+        const scrollbarColor = '#C1C1C1';
+        const scrollbarTrackColor = '#E7E7E7';
+        const scrollbarHoverColor = '#A8A8A8';
+
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth - this.headerWidth;
+        const contentHeight = this.viewportHeight - this.headerHeight;
+
+        const needsHorizontalScrollbar = totalWidth > contentWidth;
+        const needsVerticalScrollbar = totalHeight > contentHeight;
+
+        const availableContentWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
+        const availableContentHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
+
+        // Draw horizontal scrollbar
+        if (totalWidth > contentWidth) {
+            const trackWidth = availableContentWidth;
+            const trackX = this.headerWidth;
+            const trackY = this.viewportHeight - this.scrollbarHeight;
+
+            // Draw track
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(trackX, trackY, trackWidth, this.scrollbarHeight);
+
+            // Calculate thumb size and position
+            const thumbWidth = Math.max(20, (contentWidth / totalWidth) * trackWidth);
+            const maxScroll = Math.max(0, totalWidth - contentWidth);
+            const thumbX = trackX + (this.scrollX / maxScroll) * (trackWidth - thumbWidth);
+
+            // Draw thumb
+            this.ctx.fillStyle = scrollbarColor;
+            this.ctx.fillRect(thumbX, trackY + 2, thumbWidth, this.scrollbarHeight - 4);
+
+            // Add subtle borders
+            this.ctx.strokeStyle = '#999999';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(thumbX, trackY + 2, thumbWidth, this.scrollbarHeight - 4);
+        }
+
+        // Draw vertical scrollbar
+        if (totalHeight > contentHeight) {
+            const trackHeight = availableContentHeight;
+            const trackX = this.viewportWidth - this.scrollbarWidth;
+            const trackY = this.headerHeight;
+
+            // Draw track
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(trackX, trackY, this.scrollbarWidth, trackHeight);
+
+            // Calculate thumb size and position
+            const thumbHeight = Math.max(20, (contentHeight / totalHeight) * trackHeight);
+            const maxScroll = Math.max(0, totalHeight - contentHeight);
+            const thumbY = trackY + (this.scrollY / maxScroll) * (trackHeight - thumbHeight);
+
+            // Draw thumb
+            this.ctx.fillStyle = scrollbarColor;
+            this.ctx.fillRect(trackX + 2, thumbY, this.scrollbarWidth - 4, thumbHeight);
+
+            // Add subtle borders
+            this.ctx.strokeStyle = '#999999';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(trackX + 2, thumbY, this.scrollbarWidth - 4, thumbHeight);
+        }
+
+        // Draw corner (where scrollbars meet)
+        if (needsHorizontalScrollbar && needsVerticalScrollbar) {
+            this.ctx.fillStyle = scrollbarTrackColor;
+            this.ctx.fillRect(
+                this.viewportWidth - this.scrollbarWidth,
+                this.viewportHeight - this.scrollbarHeight,
+                this.scrollbarWidth,
+                this.scrollbarHeight
+            );
+        }
+    }
+
+    getScrollbarInfo(x, y) {
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth - this.headerWidth;
+        const contentHeight = this.viewportHeight - this.headerHeight;
+
+        // Check horizontal scrollbar
+        if (totalWidth > contentWidth) {
+            const trackWidth = contentWidth - this.scrollbarWidth;
+            const trackX = this.headerWidth;
+            const trackY = this.viewportHeight - this.scrollbarHeight;
+
+            if (x >= trackX && x <= trackX + trackWidth &&
+                y >= trackY && y <= trackY + this.scrollbarHeight) {
+
+                const thumbWidth = Math.max(20, (contentWidth / totalWidth) * trackWidth);
+                const maxScroll = Math.max(0, totalWidth - contentWidth);
+                const thumbX = trackX + (this.scrollX / maxScroll) * (trackWidth - thumbWidth);
+
+                if (x >= thumbX && x <= thumbX + thumbWidth) {
+                    return { type: 'horizontal', part: 'thumb' };
+                } else {
+                    return { type: 'horizontal', part: 'track' };
+                }
+            }
+        }
+        // Check vertical scrollbar
+        if (totalHeight > contentHeight) {
+            const trackHeight = contentHeight - this.scrollbarHeight;
+            const trackX = this.viewportWidth - this.scrollbarWidth;
+            const trackY = this.headerHeight;
+
+            if (x >= trackX && x <= trackX + this.scrollbarWidth &&
+                y >= trackY && y <= trackY + trackHeight) {
+
+                const thumbHeight = Math.max(20, (contentHeight / totalHeight) * trackHeight);
+                const maxScroll = Math.max(0, totalHeight - contentHeight);
+                const thumbY = trackY + (this.scrollY / maxScroll) * (trackHeight - thumbHeight);
+
+                if (y >= thumbY && y <= thumbY + thumbHeight) {
+                    return { type: 'vertical', part: 'thumb' };
+                } else {
+                    return { type: 'vertical', part: 'track' };
+                }
+            }
+        }
+        return null;
+    }
+
     generateSampleData() {
         const headers = ['ID', 'firstName', 'LastName', 'Age', 'Salary'];
         headers.forEach((header, col) => {
@@ -296,8 +449,11 @@ class sheetManager {
      */
     updateCursor(x, y) {
         const resizeInfo = this.getResizeInfo(x, y);
+        const scrollbarInfo = this.getScrollbarInfo(x, y);
         if (resizeInfo) {
             this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
+        } else if (scrollbarInfo) {
+            this.canvas.style.cursor = 'pointer';
         } else {
             this.canvas.style.cursor = 'cell';
         }
@@ -315,6 +471,28 @@ class sheetManager {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
+        const scrollbarInfo = this.getScrollbarInfo(x, y);
+        if (scrollbarInfo && scrollbarInfo.part === 'thumb') {
+            this.isScrollbarDragging = true;
+            this.scrollbarDragType = scrollbarInfo.type;
+            this.scrollbarDragStart = scrollbarInfo.type === 'horizontal' ? e.clientX : e.clientY;
+            this.scrollbarInitialScroll = scrollbarInfo.type === 'horizontal' ? this.scrollX : this.scrollY;
+            return;
+        } else if (scrollbarInfo && scrollbarInfo.part === 'track') {
+            // Handle track clicks (page up/down behavior)
+            if (scrollbarInfo.type === 'horizontal') {
+                const contentWidth = this.viewportWidth - this.headerWidth;
+                this.scrollX += x < (this.viewportWidth - this.scrollbarWidth / 2) ? -contentWidth * 0.8 : contentWidth * 0.8;
+                this.scrollX = Math.max(0, this.scrollX);
+            } else {
+                const contentHeight = this.viewportHeight - this.headerHeight;
+                this.scrollY += y < (this.viewportHeight - this.scrollbarHeight / 2) ? -contentHeight * 0.8 : contentHeight * 0.8;
+                this.scrollY = Math.max(0, this.scrollY);
+            }
+            this.render();
+            return;
+        }
 
         const resizeInfo = this.getResizeInfo(x, y);
         if (resizeInfo) {
@@ -377,28 +555,27 @@ class sheetManager {
         if (this.isScrollbarDragging) {
             if (this.scrollbarDragType === 'horizontal') {
                 const deltaX = e.clientX - this.scrollbarDragStart;
-                const scrollbarWidth = this.viewportWidth - this.headerWidth;
+                const contentWidth = this.viewportWidth - this.headerWidth;
+                const needsVerticalScrollbar = this.getTotalHeight() > (this.viewportHeight - this.headerHeight);
+                const availableWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
+                const trackWidth = availableWidth;
 
-                let totalWidth = 0;
-                for (let col = 0; col < this.cellData.cols; col++) {
-                    totalWidth += this.cellData.getColWidth(col);
-                }
-
-                const maxScroll = Math.max(0, totalWidth - scrollbarWidth);
-                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalWidth)));
+                const totalWidth = this.getTotalWidth();
+                const maxScroll = Math.max(0, totalWidth - availableWidth);
+                const scrollRatio = deltaX / trackWidth;
+                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
 
             } else if (this.scrollbarDragType === 'vertical') {
                 const deltaY = e.clientY - this.scrollbarDragStart;
-                const scrollbarHeight = this.viewportHeight - this.headerHeight;
+                const contentHeight = this.viewportHeight - this.headerHeight;
+                const needsHorizontalScrollbar = this.getTotalWidth() > (this.viewportWidth - this.headerWidth);
+                const availableHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
+                const trackHeight = availableHeight;
 
-                let totalHeight = 0;
-                for (let row = 0; row < this.cellData.rows; row++) {
-                    totalHeight += this.cellData.getRowHeight(row);
-                }
-
-                const maxScroll = Math.max(0, totalHeight - scrollbarHeight);
-                const scrollRatio = deltaY / scrollbarHeight;
-                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * totalHeight)));
+                const totalHeight = this.getTotalHeight();
+                const maxScroll = Math.max(0, totalHeight - availableHeight);
+                const scrollRatio = deltaY / trackHeight;
+                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
             }
 
             this.render();
@@ -550,12 +727,36 @@ class sheetManager {
      * @param {*mousEvent} e The mouse event object triggered on mouse scroll
      */
     handleWheel(e) {
-
         const scrollSpeed = 150;
+
+        // Calculate total content dimensions
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+
+        const contentWidth = this.viewportWidth - this.headerWidth - this.scrollbarWidth;
+        const contentHeight = this.viewportHeight - this.headerHeight - this.scrollbarHeight;
+
+        // Only allow scrolling if content is larger than viewport
+        const maxScrollX = Math.max(0, totalWidth - contentWidth);
+        const maxScrollY = Math.max(0, totalHeight - contentHeight);
+
         if (e.shiftKey) {
-            this.scrollX = Math.max(0, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+            // Horizontal scroll
+            if (maxScrollX > 0) {
+                this.scrollX = Math.max(0, Math.min(maxScrollX, this.scrollX + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed)));
+            }
         } else {
-            this.scrollY = Math.max(0, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed));
+            // Vertical scroll
+            if (maxScrollY > 0) {
+                this.scrollY = Math.max(0, Math.min(maxScrollY, this.scrollY + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed)));
+            }
         }
         this.render();
     }
@@ -637,10 +838,10 @@ class sheetManager {
             default:
                 if (e.key.length === 1 && !e.altKey) {
                     this.showCellEditor(row, col);
-                        if (this.cellEditor) {
-                            this.cellEditor.value = e.key;
-                            this.cellEditor.setSelectionRange(1, 1);
-                        }
+                    if (this.cellEditor) {
+                        this.cellEditor.value = e.key;
+                        this.cellEditor.setSelectionRange(1, 1);
+                    }
                     return;
                 }
         }
@@ -875,6 +1076,7 @@ class sheetManager {
         this.drawCells();
         this.drawHeaders();
         this.drawSelection();
+        this.drawScrollbars();
     }
 
     drawGrid() {
@@ -905,6 +1107,22 @@ class sheetManager {
         }
 
         this.ctx.stroke();
+    }
+
+    getTotalWidth() {
+        let totalWidth = 0;
+        for (let col = 0; col < this.cellData.cols; col++) {
+            totalWidth += this.cellData.getColWidth(col);
+        }
+        return totalWidth;
+    }
+
+    getTotalHeight() {
+        let totalHeight = 0;
+        for (let row = 0; row < this.cellData.rows; row++) {
+            totalHeight += this.cellData.getRowHeight(row);
+        }
+        return totalHeight;
     }
 
     drawCells() {
@@ -1137,7 +1355,7 @@ class SetCellValueCommand extends Command {
 
 /**
  * * @constructor
- * @param {object} grid - Reference to the sheetManager instance for cell manipulation.
+ * @param {object} grid - Reference to the SheetManager instance for cell manipulation.
  * @param {number} row - The row index of the cell to be cleared.
  * @param {number} col - The column index of the cell to be cleared.
  * @param {string} oldValue - The previous value of the cell before it was cleared.
@@ -1573,7 +1791,7 @@ class SelectionManager {
     }
 }
 
-const grid = new sheetManager('grid-canvas', 100000, 500);
+const grid = new SheetManager('grid-canvas', 100000, 500);
 
 document.addEventListener('DOMContentLoaded', () => {
     grid.canvas.focus();
