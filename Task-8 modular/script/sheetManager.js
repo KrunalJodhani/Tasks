@@ -148,6 +148,7 @@ export class SheetManager {
         window.addEventListener('mousemove', this.handleMouseMove.bind(this));
         window.addEventListener('mouseup', this.handleMouseUp.bind(this));
         window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
 
         this.setupFormulaInputEvents();
 
@@ -717,7 +718,6 @@ export class SheetManager {
      * @param {*index} col selceted cell's column's index
      */
     showCellEditor(row, col) {
-        this.hideCellEditor();
 
         const cell = this.cellData.getCell(row, col);
         const rect = this.getCellRect(row, col);
@@ -736,26 +736,49 @@ export class SheetManager {
         this.cellEditor = editor;
 
         editor.focus();
-        editor.select();
+        editor.setSelectionRange(editor.value.length, editor.value.length);
+
+        const handleMove = (targetRow, targetCol) => {
+            this.selection.setActiveCell(targetRow, targetCol);
+            this.cellDisplay(targetRow, targetCol);
+            this.updateCellReference();
+            this.render();
+        };
 
         editor.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+            const key = e.key;
+            const shift = e.shiftKey;
+
+            if (key === 'Enter') {
                 e.preventDefault();
+                this.hideCellEditor();
                 this.commitCellEdit(row, col, editor.value);
-                this.hideCellEditor();
-                this.canvas.focus();
-            } else if (e.key === 'Escape') {
+
+                const nextRow = shift ? Math.max(row - 1, 0) : Math.min(row + 1, this.cellData.rows - 1);
+                handleMove(nextRow, col);
+            }
+
+            else if (key === 'Tab') {
                 e.preventDefault();
                 this.hideCellEditor();
+                this.commitCellEdit(row, col, editor.value);
+
+                const nextCol = shift ? Math.max(col - 1, 0) : Math.min(col + 1, this.cellData.cols - 1);
+                handleMove(row, nextCol);
+            }
+
+            else if (key === 'Escape') {
+                e.preventDefault();
                 this.canvas.focus();
+                this.hideCellEditor();
             }
         });
 
         editor.addEventListener('blur', () => {
             this.commitCellEdit(row, col, editor.value);
-            this.hideCellEditor();
         });
     }
+
 
     hideCellEditor() {
         if (this.cellEditor) {
@@ -857,10 +880,7 @@ export class SheetManager {
             return;
         }
 
-        const {
-            row,
-            col
-        } = this.selection.activeCell;
+        const { row, col } = this.selection.activeCell;
         let newRow = row;
         let newCol = col;
 
@@ -882,6 +902,13 @@ export class SheetManager {
                 newCol = Math.min(this.cellData.cols - 1, col + 1);
                 break;
             case 'Enter':
+                e.preventDefault();
+                newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
+                break;
+            case 'Tab':
+                e.preventDefault();
+                newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
+                break;
             case 'F2':
                 e.preventDefault();
                 this.showCellEditor(row, col);
@@ -897,18 +924,20 @@ export class SheetManager {
                 this.render();
                 return;
             default:
-                if (e.key.length === 1 && !e.altKey) {
-                    this.showCellEditor(row, col);
-                    if (this.cellEditor) {
-                        this.cellEditor.value = e.key;
-                        this.cellEditor.setSelectionRange(1, 1);
-                    }
-                    return;
+                if (e.key.length === 1) {
+                    const oldCell = this.cellData.getCell(row, col);
+                    const oldValue = oldCell.value || '';
+
+                    const command = new SetCellValueCommand(this, row, col, '', oldValue);
+                    this.commandManager.execute(command);
+                    this.render();
+
+                    this.showCellEditor(row, col, e.key);
                 }
+                return;
         }
 
         if (newRow !== row || newCol !== col) {
-            this.selection.setActiveCell(newRow, newCol);
             this.selection.setActiveCell(newRow, newCol);
             this.cellDisplay(newRow, newCol);
             this.updateCellReference();
@@ -1329,8 +1358,8 @@ export class SheetManager {
                 // Draw header text
                 this.ctx.fillStyle = '#616161';
                 this.ctx.font = 'normal 12px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText((row + 1).toString(), this.headerWidth / 2, y + height / 2);
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText((row + 1).toString(), this.headerWidth - 6, y + height / 2);
             }
             y += height;
         }
@@ -1346,11 +1375,13 @@ export class SheetManager {
     }
 
     drawSelection() {
-        this.ctx.strokeStyle = '#137E43';
-        this.ctx.lineWidth = 2;
-        this.ctx.fillStyle = 'rgba(19, 126, 67, 0.1)';
+        const active = this.selection.activeCell;
+        const activeRect = this.getCellRect(active.row, active.col);
 
         this.selection.selectedRanges.forEach(range => {
+            const isSingle = range.startRow === range.endRow && range.startCol === range.endCol;
+            if (isSingle) return;
+
             const startRect = this.getCellRect(range.startRow, range.startCol);
             const endRect = this.getCellRect(range.endRow, range.endCol);
 
@@ -1359,18 +1390,42 @@ export class SheetManager {
             const width = endRect.x + endRect.width - startRect.x;
             const height = endRect.y + endRect.height - startRect.y;
 
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(19, 126, 67, 0.1)';
             this.ctx.fillRect(x, y, width, height);
 
-            this.ctx.beginPath();
-            this.ctx.rect(x, y, width, height);
-            this.ctx.stroke();
+            this.ctx.strokeStyle = '#137E43';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, width, height);
+            this.ctx.restore();
         });
 
-        const activeRect = this.getCellRect(this.selection.activeCell.row, this.selection.activeCell.col);
+        const cell = this.cellData.getCell(active.row, active.col);
+
+        this.ctx.save();
+
+        // Draw white background
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillRect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
+
+        // Draw green border
         this.ctx.strokeStyle = '#137E43';
         this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.rect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
-        this.ctx.stroke();
+        this.ctx.strokeRect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
+
+        // Draw text
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '14px Arial';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.textAlign = 'left';
+
+        const padding = 6;
+        const textX = activeRect.x + padding;
+        const textY = activeRect.y + activeRect.height / 2;
+
+        this.ctx.fillText(cell.getDisplayValue(), textX, textY);
+
+        this.ctx.restore();
+
     }
 }

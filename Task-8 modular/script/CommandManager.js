@@ -38,7 +38,6 @@ export class CommandManager {
         command.execute();
         this.undoStack.push(command);
         this.redoStack = [];
-
         if (this.undoStack.length > this.maxHistorySize) {
             this.undoStack.shift();
         }
