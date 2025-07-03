@@ -34,6 +34,9 @@ export class SelectionManager {
         this.selectionType = 'cell';
         this.selectedRows = [];
         this.selectedCols = [];
+        this.isDraggingRowCol = false;
+    this.dragStartRow = -1;
+    this.dragStartCol = -1;
     }
 
     selectRow(row, isMultiSelect = false) {
@@ -89,6 +92,65 @@ export class SelectionManager {
             endCol: c,
         }));
     }
+
+    startRowColDrag(row, col, type) {
+    this.isDraggingRowCol = true;
+    this.selectionType = type;
+    this.dragStartRow = row;
+    this.dragStartCol = col;
+    
+    if (type === 'row') {
+        this.selectedRows = [row];
+        this.selectedCols = [];
+        this.activeCell = { row, col: 0 };
+    } else {
+        this.selectedCols = [col];
+        this.selectedRows = [];
+        this.activeCell = { row: 0, col };
+    }
+}
+
+updateRowColDrag(row, col) {
+    if (!this.isDraggingRowCol) return;
+    
+    if (this.selectionType === 'row') {
+        const startRow = Math.min(this.dragStartRow, row);
+        const endRow = Math.max(this.dragStartRow, row);
+        
+        this.selectedRows = [];
+        for (let r = startRow; r <= endRow; r++) {
+            this.selectedRows.push(r);
+        }
+        
+        this.selectedRanges = [{
+            startRow: startRow,
+            startCol: 0,
+            endRow: endRow,
+            endCol: this.maxCols - 1,
+        }];
+    } else if (this.selectionType === 'column') {
+        const startCol = Math.min(this.dragStartCol, col);
+        const endCol = Math.max(this.dragStartCol, col);
+        
+        this.selectedCols = [];
+        for (let c = startCol; c <= endCol; c++) {
+            this.selectedCols.push(c);
+        }
+        
+        this.selectedRanges = [{
+            startRow: 0,
+            startCol: startCol,
+            endRow: this.maxRows - 1,
+            endCol: endCol,
+        }];
+    }
+}
+
+endRowColDrag() {
+    this.isDraggingRowCol = false;
+    this.dragStartRow = -1;
+    this.dragStartCol = -1;
+}
 
     /**
      * set the selected cell
