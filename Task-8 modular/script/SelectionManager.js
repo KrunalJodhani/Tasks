@@ -32,36 +32,62 @@ export class SelectionManager {
         this.selectionStart = null;
         this.copiedCells = null;
         this.selectionType = 'cell';
-        this.selectedRows = new Set();
-        this.selectedCols = new Set();
+        this.selectedRows = [];
+        this.selectedCols = [];
     }
 
-    selectRow(row) {
+    selectRow(row, isMultiSelect = false) {
         this.selectionType = 'row';
-        this.selectedRows.clear();
-        this.selectedCols.clear();
-        this.selectedRows.add(row);
+        
+        if (!isMultiSelect) {
+            this.selectedRows = [];
+            this.selectedCols = [];
+        }
+        
+        // Toggle selection if already selected
+        const index = this.selectedRows.indexOf(row);
+        if (index > -1) {
+            this.selectedRows.splice(index, 1);
+        } else {
+            this.selectedRows.push(row);
+        }
+        
         this.activeCell = { row, col: 0 };
-        this.selectedRanges = [{
-            startRow: row,
+        
+        // Update selectedRanges to include all selected rows
+        this.selectedRanges = this.selectedRows.map(r => ({
+            startRow: r,
             startCol: 0,
-            endRow: row,
+            endRow: r,
             endCol: this.maxCols - 1,
-        }];
+        }));
     }
 
-    selectCol(col) {
+    selectCol(col, isMultiSelect = false) {
         this.selectionType = 'column';
-        this.selectedRows.clear();
-        this.selectedCols.clear();
-        this.selectedCols.add(col);
+        
+        if (!isMultiSelect) {
+            this.selectedRows = [];
+            this.selectedCols = [];
+        }
+        
+        // Toggle selection if already selected
+        const index = this.selectedCols.indexOf(col);
+        if (index > -1) {
+            this.selectedCols.splice(index, 1);
+        } else {
+            this.selectedCols.push(col);
+        }
+        
         this.activeCell = { row: 0, col };
-        this.selectedRanges = [{
+        
+        // Update selectedRanges to include all selected columns
+        this.selectedRanges = this.selectedCols.map(c => ({
             startRow: 0,
-            startCol: col,
+            startCol: c,
             endRow: this.maxRows - 1,
-            endCol: col,
-        }]
+            endCol: c,
+        }));
     }
 
     /**
@@ -69,10 +95,10 @@ export class SelectionManager {
      * @param {*number} row row of active selectd cell
      * @param {*number} col column of active selectd cell
      */
-    setActiveCell(row, col) {
+     setActiveCell(row, col) {
         this.selectionType = 'cell';
-        this.selectedRows.clear();
-        this.selectedCols.clear();
+        this.selectedRows = [];  // Changed from .clear()
+        this.selectedCols = [];  // Changed from .clear()
         this.activeCell = { row, col };
         this.selectedRanges = [{
             startRow: row,
@@ -87,19 +113,13 @@ export class SelectionManager {
      * @param {*number} row last selected cell's row
      * @param {*number} col last selected cell's column
      */
-    startSelection(row, col) {
+     startSelection(row, col) {
         this.selectionType = 'cell';
-        this.selectedRows.clear();
-        this.selectedCols.clear();
+        this.selectedRows = [];  // Changed from .clear()
+        this.selectedCols = [];  // Changed from .clear()
         this.isSelecting = true;
-        this.selectionStart = {
-            row,
-            col
-        };
-        this.activeCell = {
-            row,
-            col
-        };
+        this.selectionStart = { row, col };
+        this.activeCell = { row, col };
     }
 
     /**
@@ -140,32 +160,30 @@ export class SelectionManager {
 
     getSelectedCells() {
         const cells = [];
-
+    
         if (this.selectionType === 'row') {
-            this.selectedRows.forEach(row => {
+            this.selectedRows.forEach(row => {  // Array forEach works the same
                 for (let col = 0; col < this.maxCols; col++) {
                     cells.push({ row, col });
                 }
             });
             return cells;
         }
-
+    
         if (this.selectionType === 'column') {
-            this.selectedCols.forEach(col => {
+            this.selectedCols.forEach(col => {  // Array forEach works the same
                 for (let row = 0; row < this.maxRows; row++) {
                     cells.push({ row, col });
                 }
             });
             return cells;
         }
-
+    
+        // Rest remains the same
         this.selectedRanges.forEach(range => {
             for (let row = range.startRow; row <= range.endRow; row++) {
                 for (let col = range.startCol; col <= range.endCol; col++) {
-                    cells.push({
-                        row,
-                        col
-                    });
+                    cells.push({ row, col });
                 }
             }
         });

@@ -22,8 +22,8 @@ export class CellData {
         this.rows = rows;
         this.cols = cols;
         this.data = new Map();
-        this.rowHeights = new Array(rows).fill(30);
-        this.colWidths = new Array(cols).fill(100);
+        this.rowHeights = new Array(rows).fill(35);
+        this.colWidths = new Array(cols).fill(110);
         this.frozenRows = 0;
         this.frozenCols = 0;
     }
