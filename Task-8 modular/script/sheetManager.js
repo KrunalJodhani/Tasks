@@ -250,7 +250,7 @@ export class SheetManager {
         const stats = this.calculateSelectionStats();
 
         document.getElementById('statusCount').textContent = stats.count > 1 ? stats.count : 0;
-        document.getElementById('statusSum').textContent = stats.sum.toLocaleString();
+        document.getElementById('statusSum').textContent = stats.count > 1 ? stats.sum.toLocaleString() : 0;
         document.getElementById('statusAverage').textContent = stats.count > 1 ? stats.average.toFixed(2) : '0';
         document.getElementById('statusMin').textContent = stats.count > 1 ? stats.min.toLocaleString() : '0';
         document.getElementById('statusMax').textContent = stats.count > 1 ? stats.max.toLocaleString() : '0';
@@ -541,6 +541,7 @@ export class SheetManager {
                     this.selection.selectCol(cellPos.col, isMultiSelect);
                 } else {
                     this.selection.startRowColDrag(0, cellPos.col, 'column');
+                    this.selection.selectCol(cellPos.col, isMultiSelect);
                     this.isDragging = true;
                 }
                 this.updateCellReference();
@@ -558,6 +559,7 @@ export class SheetManager {
                     this.selection.selectRow(cellPos.row, isMultiSelect);
                 } else {
                     this.selection.startRowColDrag(cellPos.row, 0, 'row');
+                    this.selection.selectRow(cellPos.row, isMultiSelect);
                     this.isDragging = true;
                 }
                 this.updateCellReference();
@@ -695,7 +697,6 @@ export class SheetManager {
             this.isDragging = false;
             this.updateStatusBar();
         }
-        
         if (this.isDragging) {
             this.selection.endSelection();
             this.isDragging = false;
@@ -728,8 +729,8 @@ export class SheetManager {
         const mouseX = this.lastMouseX;
         const mouseY = this.lastMouseY;
 
-        const edgeThreshold = 30;
-        const scrollSpeed = 20;
+        const edgeThreshold = 40;
+        const scrollSpeed = 40;
         let scrolled = false;
 
         if (mouseX < rect.left + edgeThreshold) {
@@ -774,10 +775,15 @@ export class SheetManager {
         editor.className = 'cell-input';
         editor.value = cell.value || '';
 
+        editor.dataset.row = row;
+        editor.dataset.col = col;
+
+        editor.style.position = 'absolute';
         editor.style.left = (rect.x) + 'px';
         editor.style.top = (rect.y) + 'px';
         editor.style.width = (rect.width) + 'px';
         editor.style.height = (rect.height) + 'px';
+        editor.style.zIndex = '1000';
 
         this.canvas.parentElement.appendChild(editor);
         this.cellEditor = editor;
@@ -835,6 +841,16 @@ export class SheetManager {
         });
     }
 
+    updateCellEditorPosition() {
+        if (this.cellEditor) {
+            const row = parseInt(this.cellEditor.dataset.row);
+            const col = parseInt(this.cellEditor.dataset.col);
+            const rect = this.getCellRect(row, col);
+
+            this.cellEditor.style.left = (rect.x) + 'px';
+            this.cellEditor.style.top = (rect.y) + 'px';
+        }
+    }
 
     hideCellEditor() {
         if (this.cellEditor) {
@@ -1236,6 +1252,7 @@ export class SheetManager {
         this.drawHeaders();
         this.drawSelection();
         this.drawScrollbars();
+        this.updateCellEditorPosition();
     }
 
     drawGrid() {

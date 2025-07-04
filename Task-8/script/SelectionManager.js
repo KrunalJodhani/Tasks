@@ -1,4 +1,3 @@
-
 /**
  * @property {{row: number, col: number}} activeCell - The currently focused cell.
  * @property {Array<Object>} selectedRanges - Array of selection ranges containing start and end coordinates.
@@ -21,7 +20,7 @@
  * 
  * @method getSelectedCells():  Returns a flat array of all selected cell coordinates.
  */
-export class SelectionManager {
+ export class SelectionManager {
     constructor() {
         this.activeCell = {
             row: 0,
@@ -34,25 +33,27 @@ export class SelectionManager {
         this.selectionType = 'cell';
         this.selectedRows = [];
         this.selectedCols = [];
-        this.isDraggingRowCol = false;
-    this.dragStartRow = -1;
-    this.dragStartCol = -1;
     }
 
     selectRow(row, isMultiSelect = false) {
         this.selectionType = 'row';
+        
         if (!isMultiSelect) {
-            this.selectedRows = [row];
+            this.selectedRows = [];
             this.selectedCols = [];
-        } else {
-            const index = this.selectedRows.indexOf(row);
-            if (index > -1) {
-                this.selectedRows.splice(index, 1);
-            } else {
-                this.selectedRows.push(row);
-            }
         }
+        
+        // Toggle selection if already selected
+        const index = this.selectedRows.indexOf(row);
+        if (index > -1) {
+            this.selectedRows.splice(index, 1);
+        } else {
+            this.selectedRows.push(row);
+        }
+        
         this.activeCell = { row, col: 0 };
+        
+        // Update selectedRanges to include all selected rows
         this.selectedRanges = this.selectedRows.map(r => ({
             startRow: r,
             startCol: 0,
@@ -63,18 +64,23 @@ export class SelectionManager {
 
     selectCol(col, isMultiSelect = false) {
         this.selectionType = 'column';
+        
         if (!isMultiSelect) {
             this.selectedRows = [];
-            this.selectedCols = [col];
-        } else {
-            const index = this.selectedCols.indexOf(col);
-            if (index > -1) {
-                this.selectedCols.splice(index, 1);
-            } else {
-                this.selectedCols.push(col);
-            }
+            this.selectedCols = [];
         }
+        
+        // Toggle selection if already selected
+        const index = this.selectedCols.indexOf(col);
+        if (index > -1) {
+            this.selectedCols.splice(index, 1);
+        } else {
+            this.selectedCols.push(col);
+        }
+        
         this.activeCell = { row: 0, col };
+        
+        // Update selectedRanges to include all selected columns
         this.selectedRanges = this.selectedCols.map(c => ({
             startRow: 0,
             startCol: c,
@@ -82,65 +88,6 @@ export class SelectionManager {
             endCol: c,
         }));
     }
-
-    startRowColDrag(row, col, type) {
-    this.isDraggingRowCol = true;
-    this.selectionType = type;
-    this.dragStartRow = row;
-    this.dragStartCol = col;
-    
-    if (type === 'row') {
-        this.selectedRows = [row];
-        this.selectedCols = [];
-        this.activeCell = { row, col: 0 };
-    } else {
-        this.selectedCols = [col];
-        this.selectedRows = [];
-        this.activeCell = { row: 0, col };
-    }
-}
-
-updateRowColDrag(row, col) {
-    if (!this.isDraggingRowCol) return;
-    
-    if (this.selectionType === 'row') {
-        const startRow = Math.min(this.dragStartRow, row);
-        const endRow = Math.max(this.dragStartRow, row);
-        
-        this.selectedRows = [];
-        for (let r = startRow; r <= endRow; r++) {
-            this.selectedRows.push(r);
-        }
-        
-        this.selectedRanges = [{
-            startRow: startRow,
-            startCol: 0,
-            endRow: endRow,
-            endCol: this.maxCols - 1,
-        }];
-    } else if (this.selectionType === 'column') {
-        const startCol = Math.min(this.dragStartCol, col);
-        const endCol = Math.max(this.dragStartCol, col);
-        
-        this.selectedCols = [];
-        for (let c = startCol; c <= endCol; c++) {
-            this.selectedCols.push(c);
-        }
-        
-        this.selectedRanges = [{
-            startRow: 0,
-            startCol: startCol,
-            endRow: this.maxRows - 1,
-            endCol: endCol,
-        }];
-    }
-}
-
-endRowColDrag() {
-    this.isDraggingRowCol = false;
-    this.dragStartRow = -1;
-    this.dragStartCol = -1;
-}
 
     /**
      * set the selected cell
