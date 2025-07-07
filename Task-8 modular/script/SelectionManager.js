@@ -35,8 +35,8 @@ export class SelectionManager {
         this.selectedRows = [];
         this.selectedCols = [];
         this.isDraggingRowCol = false;
-    this.dragStartRow = -1;
-    this.dragStartCol = -1;
+        this.dragStartRow = -1;
+        this.dragStartCol = -1;
     }
 
     selectRow(row, isMultiSelect = false) {
@@ -84,70 +84,70 @@ export class SelectionManager {
     }
 
     startRowColDrag(row, col, type) {
-    this.isDraggingRowCol = true;
-    this.selectionType = type;
-    this.dragStartRow = row;
-    this.dragStartCol = col;
-    
-    if (type === 'row') {
-        this.selectedRows = [row];
-        this.selectedCols = [];
-        this.activeCell = { row, col: 0 };
-    } else {
-        this.selectedCols = [col];
-        this.selectedRows = [];
-        this.activeCell = { row: 0, col };
-    }
-}
+        this.isDraggingRowCol = true;
+        this.selectionType = type;
+        this.dragStartRow = row;
+        this.dragStartCol = col;
 
-updateRowColDrag(row, col) {
-    if (!this.isDraggingRowCol) return;
-    
-    if (this.selectionType === 'row') {
-        const startRow = Math.min(this.dragStartRow, row);
-        const endRow = Math.max(this.dragStartRow, row);
-        
-        this.selectedRows = [];
-        for (let r = startRow; r <= endRow; r++) {
-            this.selectedRows.push(r);
+        if (type === 'row') {
+            this.selectedRows = [row];
+            this.selectedCols = [];
+            this.activeCell = { row, col: 0 };
+        } else {
+            this.selectedCols = [col];
+            this.selectedRows = [];
+            this.activeCell = { row: 0, col };
         }
-        
-        this.selectedRanges = [{
-            startRow: startRow,
-            startCol: 0,
-            endRow: endRow,
-            endCol: this.maxCols - 1,
-        }];
-    } else if (this.selectionType === 'column') {
-        const startCol = Math.min(this.dragStartCol, col);
-        const endCol = Math.max(this.dragStartCol, col);
-        
-        this.selectedCols = [];
-        for (let c = startCol; c <= endCol; c++) {
-            this.selectedCols.push(c);
-        }
-        
-        this.selectedRanges = [{
-            startRow: 0,
-            startCol: startCol,
-            endRow: this.maxRows - 1,
-            endCol: endCol,
-        }];
     }
-}
 
-endRowColDrag() {
-    this.isDraggingRowCol = false;
-    this.dragStartRow = -1;
-    this.dragStartCol = -1;
-}
+    updateRowColDrag(row, col) {
+        if (!this.isDraggingRowCol) return;
+
+        if (this.selectionType === 'row') {
+            const startRow = Math.min(this.dragStartRow, row);
+            const endRow = Math.max(this.dragStartRow, row);
+
+            this.selectedRows = [];
+            for (let r = startRow; r <= endRow; r++) {
+                this.selectedRows.push(r);
+            }
+
+            this.selectedRanges = [{
+                startRow: startRow,
+                startCol: 0,
+                endRow: endRow,
+                endCol: this.maxCols - 1,
+            }];
+        } else if (this.selectionType === 'column') {
+            const startCol = Math.min(this.dragStartCol, col);
+            const endCol = Math.max(this.dragStartCol, col);
+
+            this.selectedCols = [];
+            for (let c = startCol; c <= endCol; c++) {
+                this.selectedCols.push(c);
+            }
+
+            this.selectedRanges = [{
+                startRow: 0,
+                startCol: startCol,
+                endRow: this.maxRows - 1,
+                endCol: endCol,
+            }];
+        }
+    }
+
+    endRowColDrag() {
+        this.isDraggingRowCol = false;
+        this.dragStartRow = -1;
+        this.dragStartCol = -1;
+    }
 
     /**
      * set the selected cell
      * @param {*number} row row of active selectd cell
      * @param {*number} col column of active selectd cell
      */
-     setActiveCell(row, col) {
+    setActiveCell(row, col) {
         this.selectionType = 'cell';
         this.selectedRows = [];  // Changed from .clear()
         this.selectedCols = [];  // Changed from .clear()
@@ -165,7 +165,7 @@ endRowColDrag() {
      * @param {*number} row last selected cell's row
      * @param {*number} col last selected cell's column
      */
-     startSelection(row, col) {
+    startSelection(row, col) {
         this.selectionType = 'cell';
         this.selectedRows = [];  // Changed from .clear()
         this.selectedCols = [];  // Changed from .clear()
@@ -209,10 +209,20 @@ endRowColDrag() {
         );
     }
 
+/**
+ * Start selection from current active cell (for keyboard selection)
+ * @param {number} row starting row
+ * @param {number} col starting column
+ */
+startKeyboardSelection(row, col) {
+    if (!this.isSelecting) {
+        this.startSelection(row, col);
+    }
+}
 
     getSelectedCells() {
         const cells = [];
-    
+
         if (this.selectionType === 'row') {
             this.selectedRows.forEach(row => {  // Array forEach works the same
                 for (let col = 0; col < this.maxCols; col++) {
@@ -221,7 +231,7 @@ endRowColDrag() {
             });
             return cells;
         }
-    
+
         if (this.selectionType === 'column') {
             this.selectedCols.forEach(col => {  // Array forEach works the same
                 for (let row = 0; row < this.maxRows; row++) {
@@ -230,7 +240,7 @@ endRowColDrag() {
             });
             return cells;
         }
-    
+
         // Rest remains the same
         this.selectedRanges.forEach(range => {
             for (let row = range.startRow; row <= range.endRow; row++) {

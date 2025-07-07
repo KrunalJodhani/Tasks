@@ -111,6 +111,9 @@ export class SheetManager {
         this.lastMouseX = 0;
         this.lastMouseY = 0;
 
+        this.SetCellValueCommand = SetCellValueCommand;
+        this.ClearCellCommand = ClearCellCommand;
+
         this.setupCanvas();
         this.setupEventListeners();
         this.generateSampleData();
@@ -261,7 +264,7 @@ export class SheetManager {
      */
     drawScrollbars() {
         const scrollbarColor = '#A0A0A0';
-        const scrollbarTrackColor = '#F0F0F0';
+        const scrollbarTrackColor = '#E7E7E7';
 
         // Calculate total content dimensions
         let totalWidth = 0;
@@ -477,7 +480,7 @@ export class SheetManager {
         const resizeInfo = this.getResizeInfo(x, y);
         const scrollbarInfo = this.getScrollbarInfo(x, y);
         if (resizeInfo) {
-            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
+            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'ew-resize' : 'ns-resize';
         } else if (scrollbarInfo) {
             this.canvas.style.cursor = 'pointer';
         } else {
@@ -521,7 +524,7 @@ export class SheetManager {
         }
 
         const resizeInfo = this.getResizeInfo(x, y);
-        if (resizeInfo) {
+        if (resizeInfo && e.button === 0) {
             this.isResizing = true;
             this.resizeType = resizeInfo.type;
             this.resizeIndex = resizeInfo.index;
@@ -640,7 +643,6 @@ export class SheetManager {
             } else {
                 this.cellData.setRowHeight(this.resizeIndex, newSize);
             }
-
             this.render();
             return;
         }
@@ -687,6 +689,20 @@ export class SheetManager {
         }
 
         if (this.isResizing) {
+            const currentSize = this.resizeType === 'col' ?
+                this.cellData.getColWidth(this.resizeIndex) :
+                this.cellData.getRowHeight(this.resizeIndex);
+
+            if (currentSize !== this.resizeStartSize) {
+                this.commandManager.executeResize(
+                    this.resizeType,
+                    this.resizeIndex,
+                    currentSize,
+                    this.resizeStartSize,
+                    this
+                );
+            }
+
             this.isResizing = false;
             this.resizeType = null;
             this.resizeIndex = -1;
@@ -765,28 +781,28 @@ export class SheetManager {
      * @param {*index} row selected cell's row's index
      * @param {*index} col selceted cell's column's index
      */
-    showCellEditor(row, col) {
+    showCellEditor(row, col, initialChar = null) {
 
         const cell = this.cellData.getCell(row, col);
         const rect = this.getCellRect(row, col);
+        const canvasRect = this.canvas.getBoundingClientRect();
 
         const editor = document.createElement('input');
         editor.type = 'text';
         editor.className = 'cell-input';
         editor.value = cell.value || '';
 
-        editor.dataset.row = row;
-        editor.dataset.col = col;
-
         editor.style.position = 'absolute';
-        editor.style.left = (rect.x) + 'px';
-        editor.style.top = (rect.y) + 'px';
-        editor.style.width = (rect.width) + 'px';
-        editor.style.height = (rect.height) + 'px';
-        editor.style.zIndex = '1000';
+        editor.style.left = (canvasRect.left + rect.x) + 'px';
+        editor.style.top = (canvasRect.top + rect.y) + 'px';
+        editor.style.width = rect.width + 'px';
+        editor.style.height = rect.height + 'px';
+        editor.style.zIndex = 1000;
 
-        this.canvas.parentElement.appendChild(editor);
+        document.body.appendChild(editor);
+
         this.cellEditor = editor;
+        this.updateCellReference();
 
         editor.focus();
         editor.setSelectionRange(editor.value.length, editor.value.length);
@@ -833,6 +849,13 @@ export class SheetManager {
                 this.selection.setActiveCell(targetRow, targetCol);
                 this.updateCellReference();
                 this.render();
+            }
+        });
+
+        editor.addEventListener('input', () => {
+            const formulaInput = document.getElementById('formulaInput');
+            if (formulaInput) {
+                formulaInput.value = editor.value;
             }
         });
 
@@ -973,14 +996,77 @@ export class SheetManager {
                 e.preventDefault();
                 newCol = Math.min(this.cellData.cols - 1, col + 1);
                 break;
-            case 'Enter':
-                e.preventDefault();
-                newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
-                break;
-            case 'Tab':
-                e.preventDefault();
-                newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
-                break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (this.selection.selectedRanges.length > 0 && 
+                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                        // Area is selected, move within selection
+                        const range = this.selection.selectedRanges[0];
+                        if (e.shiftKey) {
+                            // Move up within selection
+                            if (row > range.startRow) {
+                                newRow = row - 1;
+                            } else {
+                                newRow = range.endRow;
+                                if (col > range.startCol) {
+                                    newCol = col - 1;
+                                } else {
+                                    newCol = range.endCol;
+                                }
+                            }
+                        } else {
+                            // Move down within selection
+                            if (row < range.endRow) {
+                                newRow = row + 1;
+                            } else {
+                                newRow = range.startRow;
+                                if (col < range.endCol) {
+                                    newCol = col + 1;
+                                } else {
+                                    newCol = range.startCol;
+                                }
+                            }
+                        }
+                    } else {
+                        newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
+                    }
+                    break;
+                case 'Tab':
+                    e.preventDefault();
+                    if (this.selection.selectedRanges.length > 0 && 
+                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                        // Area is selected, move within selection
+                        const range = this.selection.selectedRanges[0];
+                        if (e.shiftKey) {
+                            // Move left within selection
+                            if (col > range.startCol) {
+                                newCol = col - 1;
+                            } else {
+                                newCol = range.endCol;
+                                if (row > range.startRow) {
+                                    newRow = row - 1;
+                                } else {
+                                    newRow = range.endRow;
+                                }
+                            }
+                        } else {
+                            if (col < range.endCol) {
+                                newCol = col + 1;
+                            } else {
+                                newCol = range.startCol;
+                                if (row < range.endRow) {
+                                    newRow = row + 1;
+                                } else {
+                                    newRow = range.startRow;
+                                }
+                            }
+                        }
+                    } else {
+                        newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
+                    }
+                    break;
             case 'F2':
                 e.preventDefault();
                 this.showCellEditor(row, col);
@@ -999,18 +1085,34 @@ export class SheetManager {
                 if (e.key.length === 1) {
                     const oldCell = this.cellData.getCell(row, col);
                     const oldValue = oldCell.value || '';
-
+                
                     const command = new SetCellValueCommand(this, row, col, '', oldValue);
                     this.commandManager.execute(command);
                     this.render();
-
+                
                     this.showCellEditor(row, col, e.key);
                 }
+                
                 return;
         }
 
         if (newRow !== row || newCol !== col) {
-            this.selection.setActiveCell(newRow, newCol);
+            const isAreaSelected = this.selection.selectedRanges.length > 0 && 
+                !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                  this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol);
+            
+            if ((e.key === 'Enter' || e.key === 'Tab') && isAreaSelected) {
+                this.selection.activeCell = { row: newRow, col: newCol };
+            } else if (e.shiftKey && (e.key.startsWith('Arrow'))) {
+                if (!this.selection.isSelecting) {
+                    this.selection.startSelection(row, col);
+                }
+                this.selection.updateSelection(newRow, newCol);
+                this.selection.activeCell = { row: newRow, col: newCol };
+            } else {
+                this.selection.setActiveCell(newRow, newCol);
+                this.selection.endSelection();
+            }
             this.cellDisplay(newRow, newCol);
             this.updateCellReference();
             this.render();
@@ -1077,15 +1179,38 @@ export class SheetManager {
         }
     }
 
+    copy() {
+        this.commandManager.copy(this);
+    }
+
+    cut() {
+        this.commandManager.cut(this);
+        this.updateFormulaBar();
+        this.render();
+    }
+
+    paste() {
+        this.commandManager.paste(this);
+        this.updateFormulaBar();
+        this.render();
+    }
+
     clearSelectedCells() {
         const cells = this.selection.getSelectedCells();
+        const clearCommands = [];
+        
         cells.forEach(pos => {
             const oldCell = this.cellData.getCell(pos.row, pos.col);
             if (oldCell.value) {
                 const command = new ClearCellCommand(this, pos.row, pos.col, oldCell.value);
-                this.commandManager.execute(command);
+                clearCommands.push(command);
             }
         });
+        
+        if (clearCommands.length > 0) {
+            this.commandManager.executeBatch(clearCommands);
+        }
+        
         this.updateFormulaBar();
         this.render();
     }
@@ -1352,7 +1477,7 @@ export class SheetManager {
      * Draw Row and Column Header and colors header on selection
      */
     drawHeaders() {
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.strokeStyle = '#d0d0d0';
         this.ctx.lineWidth = 1;
         this.ctx.textAlign = 'center';
@@ -1373,7 +1498,7 @@ export class SheetManager {
 
                 const isEntireColSelected = this.selection.selectedCols.includes(col);
 
-                this.ctx.fillStyle = isEntireColSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#f8f9fa');
+                this.ctx.fillStyle = isEntireColSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#F5F5F5');
                 this.ctx.fillRect(x, 0, width, this.headerHeight);
 
                 this.ctx.strokeStyle = '#d0d0d0';
@@ -1400,7 +1525,7 @@ export class SheetManager {
         }
 
         // Draw row headers
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
 
         let y = this.headerHeight - this.scrollY;
@@ -1414,7 +1539,7 @@ export class SheetManager {
 
                 const isEntireRowSelected = this.selection.selectedRows.includes(row);
 
-                this.ctx.fillStyle = isEntireRowSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#f8f9fa');
+                this.ctx.fillStyle = isEntireRowSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#F5F5F5');
                 this.ctx.fillRect(0, y, this.headerWidth, height);
 
                 this.ctx.strokeStyle = '#d0d0d0';
@@ -1440,7 +1565,7 @@ export class SheetManager {
             y += height;
         }
 
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
         this.ctx.strokeStyle = '#d0d0d0';
         this.ctx.lineWidth = 1;
