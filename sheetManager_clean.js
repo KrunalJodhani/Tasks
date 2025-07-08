@@ -3,6 +3,7 @@ import { ClearCellCommand } from './ClearCellCommand.js';
 import { CommandManager } from './CommandManager.js';
 import { CellData } from './CellData.js';
 import { SelectionManager } from './SelectionManager.js';
+import {MouseHandler} from './MouseHandler.js'
 export class SheetManager {
     constructor(canvasId, rows, cols) {
         this.canvas = document.getElementById(canvasId);
@@ -36,8 +37,14 @@ export class SheetManager {
         this.autoScrollInterval = null;
         this.lastMouseX = 0;
         this.lastMouseY = 0;
+        this.SetCellValueCommand = SetCellValueCommand;
+        this.ClearCellCommand = ClearCellCommand;
         this.setupCanvas();
-        this.setupEventListeners();
+        this.mouseHandler = new MouseHandler(this);
+        this.setupFormulaInputEvents();
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+        window.addEventListener('resize', this.handleResize.bind(this));
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
         this.generateSampleData();
         this.render();
         this.updateCellReference();
@@ -52,26 +59,11 @@ export class SheetManager {
         this.canvas.height = this.viewportHeight * this.dpr;
         this.canvas.style.width = this.viewportWidth + 'px';
         this.canvas.style.height = this.viewportHeight + 'px';
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         this.ctx.scale(this.dpr, this.dpr);
         this.ctx.translate(0.5, 0.5);
         this.ctx.textBaseline = 'middle';
         this.ctx.textAlign = 'left';
-    }
-    setupEventListeners() {
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
-        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        window.addEventListener('resize', this.handleResize.bind(this));
-        window.addEventListener('keydown', this.handleKeyDown.bind(this));
-        this.setupFormulaInputEvents();
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                this.detectZoomChange();
-            });
-        }
     }
     setupFormulaInputEvents() {
         const formulaInput = document.getElementById('formulaInput');
@@ -132,22 +124,22 @@ export class SheetManager {
         if (numericValues.length > 0) {
             stats.sum = numericValues.reduce((a, b) => a + b, 0);
             stats.average = stats.sum / numericValues.length;
-            stats.min = Math.min(...numericValues);
-            stats.max = Math.max(...numericValues);
+            stats.min = Math.min(numericValues);
+            stats.max = Math.max(numericValues);
         }
         return stats;
     }
     updateStatusBar() {
         const stats = this.calculateSelectionStats();
         document.getElementById('statusCount').textContent = stats.count > 1 ? stats.count : 0;
-        document.getElementById('statusSum').textContent = stats.sum.toLocaleString();
+        document.getElementById('statusSum').textContent = stats.count > 1 ? stats.sum.toLocaleString() : 0;
         document.getElementById('statusAverage').textContent = stats.count > 1 ? stats.average.toFixed(2) : '0';
         document.getElementById('statusMin').textContent = stats.count > 1 ? stats.min.toLocaleString() : '0';
         document.getElementById('statusMax').textContent = stats.count > 1 ? stats.max.toLocaleString() : '0';
     }
     drawScrollbars() {
         const scrollbarColor = '#A0A0A0';
-        const scrollbarTrackColor = '#F0F0F0';
+        const scrollbarTrackColor = '#E7E7E7';
         let totalWidth = 0;
         for (let col = 0; col < this.cellData.cols; col++) {
             totalWidth += this.cellData.getColWidth(col);
@@ -290,180 +282,12 @@ export class SheetManager {
         }
         return null;
     }
-    updateCursor(x, y) {
-        const resizeInfo = this.getResizeInfo(x, y);
-        const scrollbarInfo = this.getScrollbarInfo(x, y);
-        if (resizeInfo) {
-            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'col-resize' : 'row-resize';
-        } else if (scrollbarInfo) {
-            this.canvas.style.cursor = 'pointer';
-        } else {
-            this.canvas.style.cursor = 'cell';
-        }
-    }
-    handleMouseDown(e) {
-        this.canvas.focus();
-        this.hideCellEditor();
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const scrollbarInfo = this.getScrollbarInfo(x, y);
-        if (scrollbarInfo && scrollbarInfo.part === 'thumb') {
-            this.isScrollbarDragging = true;
-            this.scrollbarDragType = scrollbarInfo.type;
-            this.scrollbarDragStart = scrollbarInfo.type === 'horizontal' ? e.clientX : e.clientY;
-            this.scrollbarInitialScroll = scrollbarInfo.type === 'horizontal' ? this.scrollX : this.scrollY;
-            return;
-        } else if (scrollbarInfo && scrollbarInfo.part === 'track') {
-            if (scrollbarInfo.type === 'horizontal') {
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                this.scrollX += x < (this.viewportWidth - this.scrollbarWidth / 2) ? -contentWidth * 0.8 : contentWidth * 0.8;
-                this.scrollX = Math.max(0, this.scrollX);
-            } else {
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                this.scrollY += y < (this.viewportHeight - this.scrollbarHeight / 2) ? -contentHeight * 0.8 : contentHeight * 0.8;
-                this.scrollY = Math.max(0, this.scrollY);
-            }
-            this.render();
-            return;
-        }
-        const resizeInfo = this.getResizeInfo(x, y);
-        if (resizeInfo) {
-            this.isResizing = true;
-            this.resizeType = resizeInfo.type;
-            this.resizeIndex = resizeInfo.index;
-            this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
-            this.resizeStartSize = resizeInfo.type === 'col' ?
-                this.cellData.getColWidth(resizeInfo.index) :
-                this.cellData.getRowHeight(resizeInfo.index);
-            return;
-        }
-        if (y <= this.headerHeight && x >= this.headerWidth) {
-            const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                this.selection.selectCol(cellPos.col, isMultiSelect);
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-        if (x <= this.headerWidth && y >= this.headerHeight) {
-            const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                this.selection.selectRow(cellPos.row, isMultiSelect);
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            if (e.shiftKey) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-            } else {
-                this.selection.startSelection(cellPos.row, cellPos.col);
-                this.isDragging = true;
-                this.autoScrollInterval = setInterval(() => this.autoScrollSelection(), 50);
-            }
-            this.updateCellReference();
-            this.render();
-        }
-        e.preventDefault();
-        this.selection.selectedRanges = [];
-        this.render();
-    }
-     handleMouseMove(e) {
-        this.lastMouseX = e.clientX;
-        this.lastMouseY = e.clientY;
-        if (this.isScrollbarDragging) {
-            if (this.scrollbarDragType === 'horizontal') {
-                const deltaX = e.clientX - this.scrollbarDragStart;
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                const needsVerticalScrollbar = this.getTotalHeight() > (this.viewportHeight - this.headerHeight);
-                const availableWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
-                const trackWidth = availableWidth;
-                const totalWidth = this.getTotalWidth();
-                const maxScroll = Math.max(0, totalWidth - availableWidth);
-                const scrollRatio = deltaX / trackWidth;
-                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-            } else if (this.scrollbarDragType === 'vertical') {
-                const deltaY = e.clientY - this.scrollbarDragStart;
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                const needsHorizontalScrollbar = this.getTotalWidth() > (this.viewportWidth - this.headerWidth);
-                const availableHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
-                const trackHeight = availableHeight;
-                const totalHeight = this.getTotalHeight();
-                const maxScroll = Math.max(0, totalHeight - availableHeight);
-                const scrollRatio = deltaY / trackHeight;
-                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-            }
-            this.render();
-            return;
-        }
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        if (this.isResizing) {
-            const currentPos = this.resizeType === 'col' ? x : y;
-            const delta = currentPos - this.resizeStartPos;
-            const newSize = Math.max(30, this.resizeStartSize + delta);
-            if (this.resizeType === 'col') {
-                this.cellData.setColWidth(this.resizeIndex, newSize);
-            } else {
-                this.cellData.setRowHeight(this.resizeIndex, newSize);
-            }
-            this.render();
-            return;
-        }
-        if (this.isDragging) {
-            const cellPos = this.getCellFromPoint(x, y);
-            if (cellPos) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-                this.render();
-            }
-        } else {
-            if (x >= 0 && x <= this.viewportWidth && y >= 0 && y <= this.viewportHeight) {
-                this.updateCursor(x, y);
-            }
-        }
-    }
-    handleMouseUp(e) {
-        if (this.isScrollbarDragging) {
-            this.isScrollbarDragging = false;
-            this.scrollbarDragType = null;
-        }
-        if (this.isResizing) {
-            this.isResizing = false;
-            this.resizeType = null;
-            this.resizeIndex = -1;
-        }
-        if (this.isDragging) {
-            this.selection.endSelection();
-            this.isDragging = false;
-            this.updateStatusBar();
-        }
-        if (this.autoScrollInterval) {
-            clearInterval(this.autoScrollInterval);
-            this.autoScrollInterval = null;
-        }
-    }
-    handleDoubleClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            this.showCellEditor(cellPos.row, cellPos.col);
-        }
-    }
     autoScrollSelection() {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = this.lastMouseX;
         const mouseY = this.lastMouseY;
-        const edgeThreshold = 30;
-        const scrollSpeed = 20;
+        const edgeThreshold = 40;
+        const scrollSpeed = 40;
         let scrolled = false;
         if (mouseX < rect.left + edgeThreshold) {
             this.scrollX = Math.max(0, this.scrollX - scrollSpeed);
@@ -489,19 +313,23 @@ export class SheetManager {
             this.render();
         }
     }
-    showCellEditor(row, col) {
+    showCellEditor(row, col, initialChar = null) {
         const cell = this.cellData.getCell(row, col);
         const rect = this.getCellRect(row, col);
+        const canvasRect = this.canvas.getBoundingClientRect();
         const editor = document.createElement('input');
         editor.type = 'text';
         editor.className = 'cell-input';
         editor.value = cell.value || '';
-        editor.style.left = (rect.x) + 'px';
-        editor.style.top = (rect.y) + 'px';
-        editor.style.width = (rect.width) + 'px';
-        editor.style.height = (rect.height) + 'px';
-        this.canvas.parentElement.appendChild(editor);
+        editor.style.position = 'absolute';
+        editor.style.left = (canvasRect.left + rect.x) + 'px';
+        editor.style.top = (canvasRect.top + rect.y) + 'px';
+        editor.style.width = rect.width + 'px';
+        editor.style.height = rect.height + 'px';
+        editor.style.zIndex = 1000;
+        document.body.appendChild(editor);
         this.cellEditor = editor;
+        this.updateCellReference();
         editor.focus();
         editor.setSelectionRange(editor.value.length, editor.value.length);
         const handleMove = (targetRow, targetCol) => {
@@ -542,9 +370,24 @@ export class SheetManager {
                 this.render();
             }
         });
+        editor.addEventListener('input', () => {
+            const formulaInput = document.getElementById('formulaInput');
+            if (formulaInput) {
+                formulaInput.value = editor.value;
+            }
+        });
         editor.addEventListener('blur', () => {
             this.commitCellEdit(row, col, editor.value);
         });
+    }
+    updateCellEditorPosition() {
+        if (this.cellEditor) {
+            const row = parseInt(this.cellEditor.dataset.row);
+            const col = parseInt(this.cellEditor.dataset.col);
+            const rect = this.getCellRect(row, col);
+            this.cellEditor.style.left = (rect.x) + 'px';
+            this.cellEditor.style.top = (rect.y) + 'px';
+        }
     }
     hideCellEditor() {
         if (this.cellEditor) {
@@ -635,14 +478,72 @@ export class SheetManager {
                 e.preventDefault();
                 newCol = Math.min(this.cellData.cols - 1, col + 1);
                 break;
-            case 'Enter':
-                e.preventDefault();
-                newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
-                break;
-            case 'Tab':
-                e.preventDefault();
-                newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
-                break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (this.selection.selectedRanges.length > 0 && 
+                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                        const range = this.selection.selectedRanges[0];
+                        if (e.shiftKey) {
+                            if (row > range.startRow) {
+                                newRow = row - 1;
+                            } else {
+                                newRow = range.endRow;
+                                if (col > range.startCol) {
+                                    newCol = col - 1;
+                                } else {
+                                    newCol = range.endCol;
+                                }
+                            }
+                        } else {
+                            if (row < range.endRow) {
+                                newRow = row + 1;
+                            } else {
+                                newRow = range.startRow;
+                                if (col < range.endCol) {
+                                    newCol = col + 1;
+                                } else {
+                                    newCol = range.startCol;
+                                }
+                            }
+                        }
+                    } else {
+                        newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
+                    }
+                    break;
+                case 'Tab':
+                    e.preventDefault();
+                    if (this.selection.selectedRanges.length > 0 && 
+                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                        const range = this.selection.selectedRanges[0];
+                        if (e.shiftKey) {
+                            if (col > range.startCol) {
+                                newCol = col - 1;
+                            } else {
+                                newCol = range.endCol;
+                                if (row > range.startRow) {
+                                    newRow = row - 1;
+                                } else {
+                                    newRow = range.endRow;
+                                }
+                            }
+                        } else {
+                            if (col < range.endCol) {
+                                newCol = col + 1;
+                            } else {
+                                newCol = range.startCol;
+                                if (row < range.endRow) {
+                                    newRow = row + 1;
+                                } else {
+                                    newRow = range.startRow;
+                                }
+                            }
+                        }
+                    } else {
+                        newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
+                    }
+                    break;
             case 'F2':
                 e.preventDefault();
                 this.showCellEditor(row, col);
@@ -665,11 +566,25 @@ export class SheetManager {
                     this.commandManager.execute(command);
                     this.render();
                     this.showCellEditor(row, col, e.key);
-                }
+                }                
                 return;
         }
         if (newRow !== row || newCol !== col) {
-            this.selection.setActiveCell(newRow, newCol);
+            const isAreaSelected = this.selection.selectedRanges.length > 0 && 
+                !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
+                  this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol);
+            if ((e.key === 'Enter' || e.key === 'Tab') && isAreaSelected) {
+                this.selection.activeCell = { row: newRow, col: newCol };
+            } else if (e.shiftKey && (e.key.startsWith('Arrow'))) {
+                if (!this.selection.isSelecting) {
+                    this.selection.startSelection(row, col);
+                }
+                this.selection.updateSelection(newRow, newCol);
+                this.selection.activeCell = { row: newRow, col: newCol };
+            } else {
+                this.selection.setActiveCell(newRow, newCol);
+                this.selection.endSelection();
+            }
             this.cellDisplay(newRow, newCol);
             this.updateCellReference();
             this.render();
@@ -723,15 +638,32 @@ export class SheetManager {
             this.render();
         }
     }
+    copy() {
+        this.commandManager.copy(this);
+    }
+    cut() {
+        this.commandManager.cut(this);
+        this.updateFormulaBar();
+        this.render();
+    }
+    paste() {
+        this.commandManager.paste(this);
+        this.updateFormulaBar();
+        this.render();
+    }
     clearSelectedCells() {
         const cells = this.selection.getSelectedCells();
+        const clearCommands = [];
         cells.forEach(pos => {
             const oldCell = this.cellData.getCell(pos.row, pos.col);
             if (oldCell.value) {
                 const command = new ClearCellCommand(this, pos.row, pos.col, oldCell.value);
-                this.commandManager.execute(command);
+                clearCommands.push(command);
             }
         });
+        if (clearCommands.length > 0) {
+            this.commandManager.executeBatch(clearCommands);
+        }
         this.updateFormulaBar();
         this.render();
     }
@@ -782,7 +714,7 @@ export class SheetManager {
         this.updateFormulaBar();
         this.updateStatusBar();
     }
-     getCellFromPoint(x, y) {
+    getCellFromPoint(x, y) {
         const clampedX = Math.max(this.headerWidth, Math.min(x, this.viewportWidth - this.scrollbarWidth));
         const clampedY = Math.max(this.headerHeight, Math.min(y, this.viewportHeight - this.scrollbarHeight));
         let currentY = this.headerHeight - this.scrollY;
@@ -852,6 +784,7 @@ export class SheetManager {
         this.drawHeaders();
         this.drawSelection();
         this.drawScrollbars();
+        this.updateCellEditorPosition();
     }
     drawGrid() {
         this.ctx.strokeStyle = '#e0e0e0';
@@ -930,7 +863,7 @@ export class SheetManager {
         }
     }
     drawHeaders() {
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.strokeStyle = '#d0d0d0';
         this.ctx.lineWidth = 1;
         this.ctx.textAlign = 'center';
@@ -945,7 +878,7 @@ export class SheetManager {
                 ) || col === this.selection.activeCell.col ||
                     this.selection.selectedCols.includes(col);
                 const isEntireColSelected = this.selection.selectedCols.includes(col);
-                this.ctx.fillStyle = isEntireColSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#f8f9fa');
+                this.ctx.fillStyle = isEntireColSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#F5F5F5');
                 this.ctx.fillRect(x, 0, width, this.headerHeight);
                 this.ctx.strokeStyle = '#d0d0d0';
                 this.ctx.lineWidth = 1;
@@ -967,7 +900,7 @@ export class SheetManager {
             }
             x += width;
         }
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.fillRect(0, this.headerHeight, this.headerWidth, this.viewportHeight - this.headerHeight);
         let y = this.headerHeight - this.scrollY;
         for (let row = 0; row < this.cellData.rows && y < this.viewportHeight; row++) {
@@ -978,7 +911,7 @@ export class SheetManager {
                 ) || row === this.selection.activeCell.row ||
                     this.selection.selectedRows.includes(row);
                 const isEntireRowSelected = this.selection.selectedRows.includes(row);
-                this.ctx.fillStyle = isEntireRowSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#f8f9fa');
+                this.ctx.fillStyle = isEntireRowSelected ? '#107c41' : (isSelected ? '#CAEAD8' : '#F5F5F5');
                 this.ctx.fillRect(0, y, this.headerWidth, height);
                 this.ctx.strokeStyle = '#d0d0d0';
                 this.ctx.lineWidth = 1;
@@ -1000,7 +933,7 @@ export class SheetManager {
             }
             y += height;
         }
-        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillStyle = '#F5F5F5';
         this.ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
         this.ctx.strokeStyle = '#d0d0d0';
         this.ctx.lineWidth = 1;

@@ -3,6 +3,7 @@ import { ClearCellCommand } from './ClearCellCommand.js';
 import { CommandManager } from './CommandManager.js';
 import { CellData } from './CellData.js';
 import { SelectionManager } from './SelectionManager.js';
+import {MouseHandler} from './MouseHandler.js'
 
 /**
  *  This class manages rendering and interaction for a spreadsheet-like interface using a single HTML canvas.
@@ -30,15 +31,9 @@ import { SelectionManager } from './SelectionManager.js';
 
 * @method constructor(canvasId,rows,cols) - Initializes the sheet manager and sets up everything.
  * @method setupCanvas() - Prepares canvas dimensions and context with DPR scaling.
- * @method setupEventListeners() - Binds mouse, keyboard, and resize events.
  * @method setupFormulaInputEvents() - Binds events to formula input DOM element.
  * @method generateSampleData() - Fills the grid with sample data.
  * @method getResizeInfo(x,y) - Checks if cursor is near a resizable edge.
- * @method updateCursor(x,y) - Changes the cursor icon based on hover position.
- * @method handleMouseDown(e) - Handles mouse down for selection/resizing.
- * @method handleMouseMove(e) - Handles dragging, hover effects, or resizing.
- * @method handleMouseUp(e) - Ends resizing or selection drag.
- * @method handleDoubleClick(e) - Activates editor input on double click.
  * @method showCellEditor(row,col) - Displays input box over selected cell.
  * @method hideCellEditor() - Removes the active cell editor input.
  * @method commitCellEdit(row,col,value) - Commits cell edit and triggers undo support.
@@ -115,7 +110,11 @@ export class SheetManager {
         this.ClearCellCommand = ClearCellCommand;
 
         this.setupCanvas();
-        this.setupEventListeners();
+        this.mouseHandler = new MouseHandler(this);
+        this.setupFormulaInputEvents();
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+        window.addEventListener('resize', this.handleResize.bind(this));
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
         this.generateSampleData();
         this.render();
         this.updateCellReference();
@@ -138,33 +137,11 @@ export class SheetManager {
         this.canvas.style.width = this.viewportWidth + 'px';
         this.canvas.style.height = this.viewportHeight + 'px';
 
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         this.ctx.scale(this.dpr, this.dpr);
         this.ctx.translate(0.5, 0.5);
         this.ctx.textBaseline = 'middle';
         this.ctx.textAlign = 'left';
-    }
-
-    /** 
-     * Binds mouse, keyboard, and resize events.
-    */
-    setupEventListeners() {
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
-
-        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        window.addEventListener('resize', this.handleResize.bind(this));
-        window.addEventListener('keydown', this.handleKeyDown.bind(this));
-
-        this.setupFormulaInputEvents();
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                this.detectZoomChange();
-            });
-        }
     }
 
     /**
@@ -199,6 +176,10 @@ export class SheetManager {
         }
     }
 
+    /**
+     * detect the zoom and true else false
+     * @returns true if screen is zoom else return false
+     */
     detectZoomChange() {
         const currentDPR = window.devicePixelRatio || 1;
         if (Math.abs(currentDPR - this.dpr) > 0.1) {
@@ -239,10 +220,9 @@ export class SheetManager {
         if (numericValues.length > 0) {
             stats.sum = numericValues.reduce((a, b) => a + b, 0);
             stats.average = stats.sum / numericValues.length;
-            stats.min = Math.min(...numericValues);
-            stats.max = Math.max(...numericValues);
+            stats.min = Math.min(numericValues);
+            stats.max = Math.max(numericValues);
         }
-
         return stats;
     }
 
@@ -471,275 +451,6 @@ export class SheetManager {
         return null;
     }
 
-    /**
-     * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
-     * @param {*number} x cusrsor's x position
-     * @param {*number} y cursor's y position
-     */
-    updateCursor(x, y) {
-        const resizeInfo = this.getResizeInfo(x, y);
-        const scrollbarInfo = this.getScrollbarInfo(x, y);
-        if (resizeInfo) {
-            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'ew-resize' : 'ns-resize';
-        } else if (scrollbarInfo) {
-            this.canvas.style.cursor = 'pointer';
-        } else {
-            this.canvas.style.cursor = 'cell';
-        }
-    }
-
-    /**
-     * Handles the mouse down event on the canvas.
-     * @param {*MouseEvent} e The mouse event object triggered on mousedown.
-     * @returns {void}
-     */
-    handleMouseDown(e) {
-        this.canvas.focus();
-        this.hideCellEditor();
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const scrollbarInfo = this.getScrollbarInfo(x, y);
-        if (scrollbarInfo && scrollbarInfo.part === 'thumb') {
-            this.isScrollbarDragging = true;
-            this.scrollbarDragType = scrollbarInfo.type;
-            this.scrollbarDragStart = scrollbarInfo.type === 'horizontal' ? e.clientX : e.clientY;
-            this.scrollbarInitialScroll = scrollbarInfo.type === 'horizontal' ? this.scrollX : this.scrollY;
-            return;
-        } else if (scrollbarInfo && scrollbarInfo.part === 'track') {
-            // Handle track clicks (page up/down behavior)
-            if (scrollbarInfo.type === 'horizontal') {
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                this.scrollX += x < (this.viewportWidth - this.scrollbarWidth / 2) ? -contentWidth * 0.8 : contentWidth * 0.8;
-                this.scrollX = Math.max(0, this.scrollX);
-            } else {
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                this.scrollY += y < (this.viewportHeight - this.scrollbarHeight / 2) ? -contentHeight * 0.8 : contentHeight * 0.8;
-                this.scrollY = Math.max(0, this.scrollY);
-            }
-            this.render();
-            return;
-        }
-
-        const resizeInfo = this.getResizeInfo(x, y);
-        if (resizeInfo && e.button === 0) {
-            this.isResizing = true;
-            this.resizeType = resizeInfo.type;
-            this.resizeIndex = resizeInfo.index;
-            this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
-            this.resizeStartSize = resizeInfo.type === 'col' ?
-                this.cellData.getColWidth(resizeInfo.index) :
-                this.cellData.getRowHeight(resizeInfo.index);
-            return;
-        }
-
-        // Column header selection
-        if (y <= this.headerHeight && x >= this.headerWidth) {
-            const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                if (isMultiSelect) {
-                    this.selection.selectCol(cellPos.col, isMultiSelect);
-                } else {
-                    this.selection.startRowColDrag(0, cellPos.col, 'column');
-                    this.selection.selectCol(cellPos.col, isMultiSelect);
-                    this.isDragging = true;
-                }
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-
-        // Row header selection
-        if (x <= this.headerWidth && y >= this.headerHeight) {
-            const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                if (isMultiSelect) {
-                    this.selection.selectRow(cellPos.row, isMultiSelect);
-                } else {
-                    this.selection.startRowColDrag(cellPos.row, 0, 'row');
-                    this.selection.selectRow(cellPos.row, isMultiSelect);
-                    this.isDragging = true;
-                }
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            if (e.shiftKey) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-            } else {
-                this.selection.startSelection(cellPos.row, cellPos.col);
-                this.isDragging = true;
-                this.autoScrollInterval = setInterval(() => this.autoScrollSelection(), 50);
-            }
-            this.updateCellReference();
-            this.render();
-        }
-
-        e.preventDefault();
-        this.selection.selectedRanges = [];
-        this.render();
-    }
-
-    /**
-     * Handles the mouse move event on the canvas.
-     * @param {*MouseEvent} e The mouse event object triggered on mouseMove
-     * @returns {void}
-     */
-
-    handleMouseMove(e) {
-        this.lastMouseX = e.clientX;
-        this.lastMouseY = e.clientY;
-
-        if (this.isScrollbarDragging) {
-            if (this.scrollbarDragType === 'horizontal') {
-                const deltaX = e.clientX - this.scrollbarDragStart;
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                const needsVerticalScrollbar = this.getTotalHeight() > (this.viewportHeight - this.headerHeight);
-                const availableWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
-                const trackWidth = availableWidth;
-
-                const totalWidth = this.getTotalWidth();
-                const maxScroll = Math.max(0, totalWidth - availableWidth);
-                const scrollRatio = deltaX / trackWidth;
-                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-
-            } else if (this.scrollbarDragType === 'vertical') {
-                const deltaY = e.clientY - this.scrollbarDragStart;
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                const needsHorizontalScrollbar = this.getTotalWidth() > (this.viewportWidth - this.headerWidth);
-                const availableHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
-                const trackHeight = availableHeight;
-
-                const totalHeight = this.getTotalHeight();
-                const maxScroll = Math.max(0, totalHeight - availableHeight);
-                const scrollRatio = deltaY / trackHeight;
-                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-            }
-
-            this.render();
-            return;
-        }
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (this.isResizing) {
-            const currentPos = this.resizeType === 'col' ? x : y;
-            const delta = currentPos - this.resizeStartPos;
-            const newSize = Math.max(30, this.resizeStartSize + delta);
-
-            if (this.resizeType === 'col') {
-                this.cellData.setColWidth(this.resizeIndex, newSize);
-            } else {
-                this.cellData.setRowHeight(this.resizeIndex, newSize);
-            }
-            this.render();
-            return;
-        }
-
-        if (this.isDragging && this.selection.isDraggingRowCol) {
-            if (this.selection.selectionType === 'row') {
-                const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
-                if (cellPos) {
-                    this.selection.updateRowColDrag(cellPos.row, cellPos.col);
-                    this.render();
-                }
-            } else if (this.selection.selectionType === 'column') {
-                const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
-                if (cellPos) {
-                    this.selection.updateRowColDrag(cellPos.row, cellPos.col);
-                    this.render();
-                }
-            }
-            return;
-        }
-
-        if (this.isDragging) {
-            const cellPos = this.getCellFromPoint(x, y);
-            if (cellPos) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-                this.render();
-            }
-        } else {
-            // Only update cursor when not dragging and mouse is within canvas bounds
-            if (x >= 0 && x <= this.viewportWidth && y >= 0 && y <= this.viewportHeight) {
-                this.updateCursor(x, y);
-            }
-        }
-    }
-
-    /**
-     * The mouse event object triggered on mouse up
-     * @param {*MouseEvent} e The mouse event object triggered on mouseUp
-     */
-    handleMouseUp(e) {
-        if (this.isScrollbarDragging) {
-            this.isScrollbarDragging = false;
-            this.scrollbarDragType = null;
-        }
-
-        if (this.isResizing) {
-            const currentSize = this.resizeType === 'col' ?
-                this.cellData.getColWidth(this.resizeIndex) :
-                this.cellData.getRowHeight(this.resizeIndex);
-
-            if (currentSize !== this.resizeStartSize) {
-                this.commandManager.executeResize(
-                    this.resizeType,
-                    this.resizeIndex,
-                    currentSize,
-                    this.resizeStartSize,
-                    this
-                );
-            }
-
-            this.isResizing = false;
-            this.resizeType = null;
-            this.resizeIndex = -1;
-        }
-
-        if (this.isDragging && this.selection.isDraggingRowCol) {
-            this.selection.endRowColDrag();
-            this.isDragging = false;
-            this.updateStatusBar();
-        }
-        if (this.isDragging) {
-            this.selection.endSelection();
-            this.isDragging = false;
-            this.updateStatusBar();
-        }
-
-        if (this.autoScrollInterval) {
-            clearInterval(this.autoScrollInterval);
-            this.autoScrollInterval = null;
-        }
-    }
-
-    /**
-     * Handles the double click event on the canvas.
-     * @param {*mouseEvent} e The mouse event object triggered on double click
-     */
-    handleDoubleClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            this.showCellEditor(cellPos.row, cellPos.col);
-        }
-    }
-
     autoScrollSelection() {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = this.lastMouseX;
@@ -864,6 +575,10 @@ export class SheetManager {
         });
     }
 
+    /**
+     * make cell editors potion move with scroll
+     */
+
     updateCellEditorPosition() {
         if (this.cellEditor) {
             const row = parseInt(this.cellEditor.dataset.row);
@@ -875,6 +590,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * hide the cell editor
+     */
     hideCellEditor() {
         if (this.cellEditor) {
             this.cellEditor.remove();
@@ -1091,8 +809,7 @@ export class SheetManager {
                     this.render();
                 
                     this.showCellEditor(row, col, e.key);
-                }
-                
+                }                
                 return;
         }
 
@@ -1119,6 +836,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * handles the resize and redraw on resize
+     */
     handleResize() {
         this.setupCanvas();
         this.render();
@@ -1146,11 +866,17 @@ export class SheetManager {
         this.isEditing = false;
     }
 
+    /**
+     * cancels the edit and according to edit update the formula bar
+     */
     cancelEdit() {
         this.isEditing = false;
         this.updateFormulaBar();
     }
 
+    /**
+     * update formula bar based on editing the cell
+     */
     updateFormulaBar() {
         const formulaInput = document.getElementById('formulaInput');
         if (formulaInput) {
@@ -1163,6 +889,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * undo function
+     */
     undo() {
         if (this.commandManager.undo()) {
             this.updateCellReference();
@@ -1171,6 +900,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * redo function
+     */
     redo() {
         if (this.commandManager.redo()) {
             this.updateCellReference();
@@ -1179,22 +911,34 @@ export class SheetManager {
         }
     }
 
+    /**
+     * copy function
+     */
     copy() {
         this.commandManager.copy(this);
     }
 
+    /**
+     * cut function
+     */
     cut() {
         this.commandManager.cut(this);
         this.updateFormulaBar();
         this.render();
     }
 
+    /**
+     * paste function
+     */
     paste() {
         this.commandManager.paste(this);
         this.updateFormulaBar();
         this.render();
     }
 
+    /**
+     * remove the selection area
+     */
     clearSelectedCells() {
         const cells = this.selection.getSelectedCells();
         const clearCommands = [];
@@ -1245,6 +989,9 @@ export class SheetManager {
         return name;
     }
 
+    /**
+     * updte cell reference on movement of active cell
+     */
     updateCellReference() {
         const cellRef = document.getElementById('cellReference');
         if (cellRef) {
@@ -1365,6 +1112,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * draw canvas
+     */
     render() {
         this.detectZoomChange();
         this.ctx.clearRect(-0.5, -0.5, this.viewportWidth + 1, this.viewportHeight + 1);
@@ -1380,6 +1130,9 @@ export class SheetManager {
         this.updateCellEditorPosition();
     }
 
+    /**
+     * draw lines for raw and column
+     */
     drawGrid() {
         this.ctx.strokeStyle = '#e0e0e0';
         this.ctx.lineWidth = 1;
@@ -1410,6 +1163,10 @@ export class SheetManager {
         this.ctx.stroke();
     }
 
+    /**
+     * from total col it calculate total width
+     * @returns total width of excel
+     */
     getTotalWidth() {
         let totalWidth = 0;
         for (let col = 0; col < this.cellData.cols; col++) {
@@ -1418,6 +1175,10 @@ export class SheetManager {
         return totalWidth;
     }
 
+    /**
+     * from total row it calculate total height
+     * @returns total height of excel
+     */
     getTotalHeight() {
         let totalHeight = 0;
         for (let row = 0; row < this.cellData.rows; row++) {
@@ -1426,6 +1187,9 @@ export class SheetManager {
         return totalHeight;
     }
 
+    /**
+     * cell value display
+     */
     drawCells() {
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'left';

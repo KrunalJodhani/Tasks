@@ -246,7 +246,6 @@ export class SheetManager {
             stats.min = Math.min(numericValues);
             stats.max = Math.max(numericValues);
         }
-
         return stats;
     }
 
