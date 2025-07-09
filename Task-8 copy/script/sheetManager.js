@@ -3,6 +3,7 @@ import { ClearCellCommand } from './ClearCellCommand.js';
 import { CommandManager } from './CommandManager.js';
 import { CellData } from './CellData.js';
 import { SelectionManager } from './SelectionManager.js';
+import {MouseHandler} from './MouseHandler.js'
 
 /**
  *  This class manages rendering and interaction for a spreadsheet-like interface using a single HTML canvas.
@@ -113,6 +114,7 @@ export class SheetManager {
 
         this.SetCellValueCommand = SetCellValueCommand;
         this.ClearCellCommand = ClearCellCommand;
+        this.mouseHandler = new MouseHandler(this);
 
         this.setupCanvas();
         this.setupEventListeners();
@@ -149,12 +151,8 @@ export class SheetManager {
      * Binds mouse, keyboard, and resize events.
     */
     setupEventListeners() {
-        this.canvas.addEventListener('pointerdown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
         this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
 
-        window.addEventListener('pointermove', this.handleMouseMove.bind(this));
-        window.addEventListener('pointerup', this.handleMouseUp.bind(this));
         window.addEventListener('resize', this.handleResize.bind(this));
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
 
@@ -442,37 +440,40 @@ export class SheetManager {
      * @param {*number} y y position of row/columnn
      * @returns object which returns resize type is row/column and row/column's index
      */
-    getResizeInfo(x, y) {
-        const tolerance = 5;
-
-        if (y <= this.headerHeight && x >= this.headerWidth) {
-            let currentX = this.headerWidth - this.scrollX;
+     getResizeInfo(x, y) {
+        const dpr = this.dpr || window.devicePixelRatio || 1;
+        const tolerance = 5 * dpr;
+    
+        // Column resize (top header area)
+        if (y < this.headerHeight * dpr) {
+            let currentX = (this.headerWidth - this.scrollX) * dpr;
+    
             for (let col = 0; col < this.cellData.cols; col++) {
-                currentX += this.cellData.getColWidth(col);
+                const width = this.cellData.getColWidth(col) * dpr;
+                currentX += width;
+    
                 if (Math.abs(x - currentX) <= tolerance) {
-                    return {
-                        type: 'col',
-                        index: col
-                    };
+                    return { type: 'col', index: col };
                 }
             }
         }
-
-        if (x <= this.headerWidth && y >= this.headerHeight) {
-            let currentY = this.headerHeight - this.scrollY;
+    
+        // Row resize (left header area)
+        if (x < this.headerWidth * dpr) {
+            let currentY = (this.headerHeight - this.scrollY) * dpr;
+    
             for (let row = 0; row < this.cellData.rows; row++) {
-                currentY += this.cellData.getRowHeight(row);
+                const height = this.cellData.getRowHeight(row) * dpr;
+                currentY += height;
+    
                 if (Math.abs(y - currentY) <= tolerance) {
-                    return {
-                        type: 'row',
-                        index: row
-                    };
+                    return { type: 'row', index: row };
                 }
             }
         }
-
         return null;
     }
+    
 
     /**
      * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
@@ -488,258 +489,6 @@ export class SheetManager {
             this.canvas.style.cursor = 'pointer';
         } else {
             this.canvas.style.cursor = 'cell';
-        }
-    }
-
-    /**
-     * Handles the mouse down event on the canvas.
-     * @param {*MouseEvent} e The mouse event object triggered on mousedown.
-     * @returns {void}
-     */
-    handleMouseDown(e) {
-        this.canvas.focus();
-        this.hideCellEditor();
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const scrollbarInfo = this.getScrollbarInfo(x, y);
-        if (scrollbarInfo && scrollbarInfo.part === 'thumb') {
-            this.isScrollbarDragging = true;
-            this.scrollbarDragType = scrollbarInfo.type;
-            this.scrollbarDragStart = scrollbarInfo.type === 'horizontal' ? e.clientX : e.clientY;
-            this.scrollbarInitialScroll = scrollbarInfo.type === 'horizontal' ? this.scrollX : this.scrollY;
-            return;
-        } else if (scrollbarInfo && scrollbarInfo.part === 'track') {
-            // Handle track clicks (page up/down behavior)
-            if (scrollbarInfo.type === 'horizontal') {
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                this.scrollX += x < (this.viewportWidth - this.scrollbarWidth / 2) ? -contentWidth * 0.8 : contentWidth * 0.8;
-                this.scrollX = Math.max(0, this.scrollX);
-            } else {
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                this.scrollY += y < (this.viewportHeight - this.scrollbarHeight / 2) ? -contentHeight * 0.8 : contentHeight * 0.8;
-                this.scrollY = Math.max(0, this.scrollY);
-            }
-            this.render();
-            return;
-        }
-
-        const resizeInfo = this.getResizeInfo(x, y);
-        if (resizeInfo && e.button === 0) {
-            this.isResizing = true;
-            this.resizeType = resizeInfo.type;
-            this.resizeIndex = resizeInfo.index;
-            this.resizeStartPos = resizeInfo.type === 'col' ? x : y;
-            this.resizeStartSize = resizeInfo.type === 'col' ?
-                this.cellData.getColWidth(resizeInfo.index) :
-                this.cellData.getRowHeight(resizeInfo.index);
-            return;
-        }
-
-        // Column header selection
-        if (y <= this.headerHeight && x >= this.headerWidth) {
-            const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                if (isMultiSelect) {
-                    this.selection.selectCol(cellPos.col, isMultiSelect);
-                } else {
-                    this.selection.startRowColDrag(0, cellPos.col, 'column');
-                    this.selection.selectCol(cellPos.col, isMultiSelect);
-                    this.isDragging = true;
-                }
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-
-        // Row header selection
-        if (x <= this.headerWidth && y >= this.headerHeight) {
-            const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
-            if (cellPos) {
-                const isMultiSelect = e.ctrlKey || e.metaKey;
-                if (isMultiSelect) {
-                    this.selection.selectRow(cellPos.row, isMultiSelect);
-                } else {
-                    this.selection.startRowColDrag(cellPos.row, 0, 'row');
-                    this.selection.selectRow(cellPos.row, isMultiSelect);
-                    this.isDragging = true;
-                }
-                this.updateCellReference();
-                this.render();
-                return;
-            }
-        }
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            if (e.shiftKey) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-            } else {
-                this.selection.startSelection(cellPos.row, cellPos.col);
-                this.isDragging = true;
-                this.autoScrollInterval = setInterval(() => this.autoScrollSelection(), 50);
-            }
-            this.updateCellReference();
-            this.render();
-        }
-
-        e.preventDefault();
-        this.selection.selectedRanges = [];
-        this.render();
-    }
-
-    /**
-     * Handles the mouse move event on the canvas.
-     * @param {*MouseEvent} e The mouse event object triggered on mouseMove
-     * @returns {void}
-     */
-
-    handleMouseMove(e) {
-        this.lastMouseX = e.clientX;
-        this.lastMouseY = e.clientY;
-
-        if (this.isScrollbarDragging) {
-            if (this.scrollbarDragType === 'horizontal') {
-                const deltaX = e.clientX - this.scrollbarDragStart;
-                const contentWidth = this.viewportWidth - this.headerWidth;
-                const needsVerticalScrollbar = this.getTotalHeight() > (this.viewportHeight - this.headerHeight);
-                const availableWidth = contentWidth - (needsVerticalScrollbar ? this.scrollbarWidth : 0);
-                const trackWidth = availableWidth;
-
-                const totalWidth = this.getTotalWidth();
-                const maxScroll = Math.max(0, totalWidth - availableWidth);
-                const scrollRatio = deltaX / trackWidth;
-                this.scrollX = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-
-            } else if (this.scrollbarDragType === 'vertical') {
-                const deltaY = e.clientY - this.scrollbarDragStart;
-                const contentHeight = this.viewportHeight - this.headerHeight;
-                const needsHorizontalScrollbar = this.getTotalWidth() > (this.viewportWidth - this.headerWidth);
-                const availableHeight = contentHeight - (needsHorizontalScrollbar ? this.scrollbarHeight : 0);
-                const trackHeight = availableHeight;
-
-                const totalHeight = this.getTotalHeight();
-                const maxScroll = Math.max(0, totalHeight - availableHeight);
-                const scrollRatio = deltaY / trackHeight;
-                this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollbarInitialScroll + (scrollRatio * maxScroll)));
-            }
-
-            this.render();
-            return;
-        }
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (this.isResizing) {
-            const currentPos = this.resizeType === 'col' ? x : y;
-            const delta = currentPos - this.resizeStartPos;
-            const newSize = Math.max(30, this.resizeStartSize + delta);
-
-            if (this.resizeType === 'col') {
-                this.cellData.setColWidth(this.resizeIndex, newSize);
-            } else {
-                this.cellData.setRowHeight(this.resizeIndex, newSize);
-            }
-            this.render();
-            return;
-        }
-
-        if (this.isDragging && this.selection.isDraggingRowCol) {
-            if (this.selection.selectionType === 'row') {
-                const cellPos = this.getCellFromPoint(this.headerWidth + 1, y);
-                if (cellPos) {
-                    this.selection.updateRowColDrag(cellPos.row, cellPos.col);
-                    this.render();
-                }
-            } else if (this.selection.selectionType === 'column') {
-                const cellPos = this.getCellFromPoint(x, this.headerHeight + 1);
-                if (cellPos) {
-                    this.selection.updateRowColDrag(cellPos.row, cellPos.col);
-                    this.render();
-                }
-            }
-            return;
-        }
-
-        if (this.isDragging) {
-            const cellPos = this.getCellFromPoint(x, y);
-            if (cellPos) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-                this.render();
-            }
-        } else {
-            // Only update cursor when not dragging and mouse is within canvas bounds
-            if (x >= 0 && x <= this.viewportWidth && y >= 0 && y <= this.viewportHeight) {
-                this.updateCursor(x, y);
-            }
-        }
-    }
-
-    /**
-     * The mouse event object triggered on mouse up
-     * @param {*MouseEvent} e The mouse event object triggered on mouseUp
-     */
-    handleMouseUp(e) {
-        if (this.isScrollbarDragging) {
-            this.isScrollbarDragging = false;
-            this.scrollbarDragType = null;
-        }
-
-        if (this.isResizing) {
-            const currentSize = this.resizeType === 'col' ?
-                this.cellData.getColWidth(this.resizeIndex) :
-                this.cellData.getRowHeight(this.resizeIndex);
-
-            if (currentSize !== this.resizeStartSize) {
-                this.commandManager.executeResize(
-                    this.resizeType,
-                    this.resizeIndex,
-                    currentSize,
-                    this.resizeStartSize,
-                    this
-                );
-            }
-
-            this.isResizing = false;
-            this.resizeType = null;
-            this.resizeIndex = -1;
-        }
-
-        if (this.isDragging && this.selection.isDraggingRowCol) {
-            this.selection.endRowColDrag();
-            this.isDragging = false;
-            this.updateStatusBar();
-        }
-        if (this.isDragging) {
-            this.selection.endSelection();
-            this.isDragging = false;
-            this.updateStatusBar();
-        }
-
-        if (this.autoScrollInterval) {
-            clearInterval(this.autoScrollInterval);
-            this.autoScrollInterval = null;
-        }
-    }
-
-    /**
-     * Handles the double click event on the canvas.
-     * @param {*mouseEvent} e The mouse event object triggered on double click
-     */
-    handleDoubleClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const cellPos = this.getCellFromPoint(x, y);
-        if (cellPos) {
-            this.showCellEditor(cellPos.row, cellPos.col);
         }
     }
 
@@ -800,7 +549,7 @@ export class SheetManager {
         editor.style.top = (canvasRect.top + rect.y) + 'px';
         editor.style.width = rect.width + 'px';
         editor.style.height = rect.height + 'px';
-        editor.style.zIndex = 1000;
+        editor.style.zIndex = 1;
 
         document.body.appendChild(editor);
 
@@ -1134,6 +883,7 @@ export class SheetManager {
     handleResize() {
         this.setupCanvas();
         this.render();
+        this.dpr = window.devicePixelRatio || 1;
     }
 
     /**
@@ -1321,43 +1071,45 @@ export class SheetManager {
      * @param {*number} y y position of cursor on screen
      * @returns an object which returns row and column index of cell
      */
-    getCellFromPoint(x, y) {
-        const clampedX = Math.max(this.headerWidth, Math.min(x, this.viewportWidth - this.scrollbarWidth));
-        const clampedY = Math.max(this.headerHeight, Math.min(y, this.viewportHeight - this.scrollbarHeight));
-
-        let currentY = this.headerHeight - this.scrollY;
+     getCellFromPoint(x, y) {
+        const dpr = this.dpr || window.devicePixelRatio || 1;
+    
+        const clampedX = Math.max(this.headerWidth * dpr, Math.min(x, (this.viewportWidth - this.scrollbarWidth) * dpr));
+        const clampedY = Math.max(this.headerHeight * dpr, Math.min(y, (this.viewportHeight - this.scrollbarHeight) * dpr));
+    
+        let currentY = (this.headerHeight - this.scrollY) * dpr;
         let row = -1;
         for (let r = 0; r < this.cellData.rows; r++) {
-            const height = this.cellData.getRowHeight(r);
+            const height = this.cellData.getRowHeight(r) * dpr;
             if (clampedY >= currentY && clampedY < currentY + height) {
                 row = r;
                 break;
             }
             currentY += height;
         }
-
+    
         if (row === -1 && clampedY >= currentY) {
             row = this.cellData.rows - 1;
         }
-
-        let currentX = this.headerWidth - this.scrollX;
+    
+        let currentX = (this.headerWidth - this.scrollX) * dpr;
         let col = -1;
         for (let c = 0; c < this.cellData.cols; c++) {
-            const width = this.cellData.getColWidth(c);
+            const width = this.cellData.getColWidth(c) * dpr;
             if (clampedX >= currentX && clampedX < currentX + width) {
                 col = c;
                 break;
             }
             currentX += width;
         }
-
+    
         if (col === -1 && clampedX >= currentX) {
             col = this.cellData.cols - 1;
         }
-
+    
         return (row >= 0 && col >= 0) ? { row, col } : null;
     }
-
+    
     /**
      * get the cell's rectangel from row and column
      * @param {*number} row 
