@@ -1,10 +1,7 @@
-import { SheetManager } from "./sheetManager.js";
-
-
 export default class ColResize {
 
     /**
-     * @param {SheetManager} sheet
+     * @param {Object} sheet
      */
     constructor(sheet) {
         this.sheet = sheet;

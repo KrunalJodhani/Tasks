@@ -1,13 +1,8 @@
-import { SheetManager } from "./sheetManager.js";
-
 export default class CellSelection {
     /**
-     * @param {*SheetManager} sheet
+     * @param {*obejet} sheet
      */
     constructor(sheet) {
-        /**
-         * @type {SheetManager}
-         */
         this.sheet = sheet;
         this.active = false;
         this.autoScrollInterval = null;
@@ -44,7 +39,7 @@ export default class CellSelection {
             this.active = true;
             this.lastMouseX = e.clientX;
             this.lastMouseY = e.clientY;
-            this.autoScrollInterval = setInterval(() => this.autoScroll(), 40);
+            this.autoScrollInterval = setInterval(() => this.autoScroll(), 50);
         }
 
         this.sheet.updateCellReference();

@@ -28,35 +28,6 @@ import {MouseHandler} from './MouseHandler.js'
  * @property {number} resizeStartPos - Mouse position when resize started.
  * @property {number} resizeStartSize - Initial size of the row/col before resizing.
  * @property {HTMLInputElement|null} cellEditor - The active input element for cell editing.
-
-* @method constructor(canvasId,rows,cols) - Initializes the sheet manager and sets up everything.
- * @method setupCanvas() - Prepares canvas dimensions and context with DPR scaling.
- * @method setupFormulaInputEvents() - Binds events to formula input DOM element.
- * @method generateSampleData() - Fills the grid with sample data.
- * @method getResizeInfo(x,y) - Checks if cursor is near a resizable edge.
- * @method showCellEditor(row,col) - Displays input box over selected cell.
- * @method hideCellEditor() - Removes the active cell editor input.
- * @method commitCellEdit(row,col,value) - Commits cell edit and triggers undo support.
- * @method commitEdit(value) - Commits edit from formula input.
- * @method cancelEdit() - Cancels formula bar edit.
- * @method updateFormulaBar() - Updates the formula input value to match the selected cell.
- * @method undo() - Reverts last change using command manager.
- * @method redo() - Reapplies undone change using command manager.
- * @method clearSelectedCells() - Clears content of all selected cells.
- * @method setCellValueDirect(row,col,value) - Directly sets or clears a cell value.
- * @method getColumnName(col) - Converts a column index to Excel-style name (e.g., A, B, Z, AA).
- * @method updateCellReference() - Updates the UI with the active cell's name (A1, B2, etc.).
- * @method getCellFromPoint(x,y) - Gets cell position (row, col) from mouse coordinates.
- * @method getCellRect(row,col) - Returns bounding box of a specific cell.
- * @method cellDisplay(row,col) - Scrolls viewport to bring cell into view.
- * @method handleWheel(e) - Scrolls viewport with mouse wheel.
- * @method handleKeyDown(e) - Keyboard-based interaction handler.
- * @method handleResize() - Reinitializes canvas on window resize.
- * @method render() - Main draw function, calls all rendering sub-functions.
- * @method drawGrid() - Draws the grid lines.
- * @method drawCells() - Draws visible cell values.
- * @method drawHeaders() - Draws row and column headers.
- * @method drawSelection() - Draws selected range and active cell border.
  */
 
 export class SheetManager {
@@ -108,13 +79,10 @@ export class SheetManager {
 
         this.SetCellValueCommand = SetCellValueCommand;
         this.ClearCellCommand = ClearCellCommand;
+        this.mouseHandler = new MouseHandler(this);
 
         this.setupCanvas();
-        this.mouseHandler = new MouseHandler(this);
-        this.setupFormulaInputEvents();
-        window.addEventListener('keydown', this.handleKeyDown.bind(this));
-        window.addEventListener('resize', this.handleResize.bind(this));
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+        this.setupEventListeners();
         this.generateSampleData();
         this.render();
         this.updateCellReference();
@@ -137,11 +105,29 @@ export class SheetManager {
         this.canvas.style.width = this.viewportWidth + 'px';
         this.canvas.style.height = this.viewportHeight + 'px';
 
-        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(this.dpr, this.dpr);
         this.ctx.translate(0.5, 0.5);
         this.ctx.textBaseline = 'middle';
         this.ctx.textAlign = 'left';
+    }
+
+    /** 
+     * Binds mouse, keyboard, and resize events.
+    */
+    setupEventListeners() {
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+
+        window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+
+        this.setupFormulaInputEvents();
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                this.detectZoomChange();
+            });
+        }
     }
 
     /**
@@ -419,38 +405,61 @@ export class SheetManager {
      * @param {*number} y y position of row/columnn
      * @returns object which returns resize type is row/column and row/column's index
      */
-    getResizeInfo(x, y) {
-        const tolerance = 5;
-
-        if (y <= this.headerHeight && x >= this.headerWidth) {
-            let currentX = this.headerWidth - this.scrollX;
+     getResizeInfo(x, y) {
+        const dpr = this.dpr || window.devicePixelRatio || 1;
+        const tolerance = 5 * dpr;
+    
+        // Column resize (top header area)
+        if (y < this.headerHeight * dpr) {
+            let currentX = (this.headerWidth - this.scrollX) * dpr;
+    
             for (let col = 0; col < this.cellData.cols; col++) {
-                currentX += this.cellData.getColWidth(col);
+                const width = this.cellData.getColWidth(col) * dpr;
+                currentX += width;
+    
                 if (Math.abs(x - currentX) <= tolerance) {
-                    return {
-                        type: 'col',
-                        index: col
-                    };
+                    return { type: 'col', index: col };
                 }
             }
         }
-
-        if (x <= this.headerWidth && y >= this.headerHeight) {
-            let currentY = this.headerHeight - this.scrollY;
+    
+        // Row resize (left header area)
+        if (x < this.headerWidth * dpr) {
+            let currentY = (this.headerHeight - this.scrollY) * dpr;
+    
             for (let row = 0; row < this.cellData.rows; row++) {
-                currentY += this.cellData.getRowHeight(row);
+                const height = this.cellData.getRowHeight(row) * dpr;
+                currentY += height;
+    
                 if (Math.abs(y - currentY) <= tolerance) {
-                    return {
-                        type: 'row',
-                        index: row
-                    };
+                    return { type: 'row', index: row };
                 }
             }
         }
-
         return null;
     }
+    
 
+    /**
+     * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
+     * @param {*number} x cusrsor's x position
+     * @param {*number} y cursor's y position
+     */
+    updateCursor(x, y) {
+        const resizeInfo = this.getResizeInfo(x, y);
+        const scrollbarInfo = this.getScrollbarInfo(x, y);
+        if (resizeInfo) {
+            this.canvas.style.cursor = resizeInfo.type === 'col' ? 'ew-resize' : 'ns-resize';
+        } else if (scrollbarInfo) {
+            this.canvas.style.cursor = 'pointer';
+        } else {
+            this.canvas.style.cursor = 'cell';
+        }
+    }
+
+    /**
+     * Handles auto scrolling of selection when mouse is near the edge of the canvas.
+     */
     autoScrollSelection() {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = this.lastMouseX;
@@ -508,7 +517,7 @@ export class SheetManager {
         editor.style.top = (canvasRect.top + rect.y) + 'px';
         editor.style.width = rect.width + 'px';
         editor.style.height = rect.height + 'px';
-        editor.style.zIndex = 1000;
+        editor.style.zIndex = 1;
 
         document.body.appendChild(editor);
 
@@ -842,6 +851,7 @@ export class SheetManager {
     handleResize() {
         this.setupCanvas();
         this.render();
+        this.dpr = window.devicePixelRatio || 1;
     }
 
     /**
@@ -1029,43 +1039,45 @@ export class SheetManager {
      * @param {*number} y y position of cursor on screen
      * @returns an object which returns row and column index of cell
      */
-    getCellFromPoint(x, y) {
-        const clampedX = Math.max(this.headerWidth, Math.min(x, this.viewportWidth - this.scrollbarWidth));
-        const clampedY = Math.max(this.headerHeight, Math.min(y, this.viewportHeight - this.scrollbarHeight));
-
-        let currentY = this.headerHeight - this.scrollY;
+     getCellFromPoint(x, y) {
+        const dpr = this.dpr || window.devicePixelRatio || 1;
+    
+        const clampedX = Math.max(this.headerWidth * dpr, Math.min(x, (this.viewportWidth - this.scrollbarWidth) * dpr));
+        const clampedY = Math.max(this.headerHeight * dpr, Math.min(y, (this.viewportHeight - this.scrollbarHeight) * dpr));
+    
+        let currentY = (this.headerHeight - this.scrollY) * dpr;
         let row = -1;
         for (let r = 0; r < this.cellData.rows; r++) {
-            const height = this.cellData.getRowHeight(r);
+            const height = this.cellData.getRowHeight(r) * dpr;
             if (clampedY >= currentY && clampedY < currentY + height) {
                 row = r;
                 break;
             }
             currentY += height;
         }
-
+    
         if (row === -1 && clampedY >= currentY) {
             row = this.cellData.rows - 1;
         }
-
-        let currentX = this.headerWidth - this.scrollX;
+    
+        let currentX = (this.headerWidth - this.scrollX) * dpr;
         let col = -1;
         for (let c = 0; c < this.cellData.cols; c++) {
-            const width = this.cellData.getColWidth(c);
+            const width = this.cellData.getColWidth(c) * dpr;
             if (clampedX >= currentX && clampedX < currentX + width) {
                 col = c;
                 break;
             }
             currentX += width;
         }
-
+    
         if (col === -1 && clampedX >= currentX) {
             col = this.cellData.cols - 1;
         }
-
+    
         return (row >= 0 && col >= 0) ? { row, col } : null;
     }
-
+    
     /**
      * get the cell's rectangel from row and column
      * @param {*number} row 

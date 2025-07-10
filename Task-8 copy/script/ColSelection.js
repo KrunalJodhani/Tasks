@@ -1,9 +1,22 @@
+import { SheetManager } from "./sheetManager.js";
+
 export default class ColSelection {
+    /**
+     * @param {*SheetManager} sheet
+     */
     constructor(sheet) {
+        /** 
+         * @type {SheetManager} 
+         */
         this.sheet = sheet;
         this.active = false;
     }
 
+    /**
+     * @param {Number} x pointer x position
+     * @param {Number} y pointer y position
+     * @returns {Boolean} returns true if the pointer is over the column header area
+     */
     hitTest(x, y) {
         const isOnScrollbar = this.sheet.getScrollbarInfo(x, y);
         if (y > this.sheet.headerHeight || x < this.sheet.headerWidth || isOnScrollbar) return false;
@@ -15,6 +28,12 @@ export default class ColSelection {
         return true;
     }
     
+    /**
+     * 
+     * @param {PointerEvent} e 
+     * @param {Number} x pointer x position
+     * @param {Number} y pointer y position
+     */
     onPointerDown(e, x, y) {
         this.active = true;
 
@@ -26,6 +45,12 @@ export default class ColSelection {
         this.sheet.render();
     }
 
+    /**
+     * 
+     * @param {PointerEvent} e
+     * @param {Number} x pointer x position
+     * @param {Number} y pointer y position
+     */
     onPointerMove(e, x, y) {
         if (!this.active || !this.sheet.selection.isDraggingRowCol) return;
 
@@ -36,6 +61,11 @@ export default class ColSelection {
         }
     }
 
+    /**
+     * @param {PointerEvent} e 
+     * @param {Number} x pointer x position
+     * @param {Number} y pointer y position
+     */
     onPointerUp(e, x, y) {
         if (!this.active) return;
 

@@ -5,12 +5,19 @@ import ColSelection from './ColSelection.js';
 import CellSelection from './CellSelection.js';
 import CursorMove from './CursorMove.js';
 import ScrollMove from './ScrollMove.js';
+import { SheetManager } from "./sheetManager.js";
 
 /**
  * Handles mouse events and delegates them to the appropriate strategy
  */
 export class MouseHandler {
+    /**
+     * @param {*SheetManager} sheetManager
+     */
     constructor(sheetManager) {
+        /**
+         * @type {SheetManager}
+         */
         this.sheet = sheetManager;
 
         this.strategies = [
@@ -28,6 +35,9 @@ export class MouseHandler {
         this.attachEvents();
     }
 
+    /**
+     * Attaches mouse event listeners to the sheet's canvas and window
+     */
     attachEvents() {
         this.sheet.canvas.addEventListener('pointerdown', this.onPointerDown.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this));
@@ -45,6 +55,11 @@ export class MouseHandler {
     };
 }
 
+/**
+ * 
+ * @param {PointerEvent} e 
+ * @returns which strategy to use based on the pointer position
+ */
     onPointerDown(e) {
         this.sheet.hideCellEditor();
         const pos = this.getMousePosition(e);
@@ -58,6 +73,10 @@ export class MouseHandler {
         }
     }
 
+     /**
+      * 
+      * @param {PointerEvent} e 
+      */
     onPointerMove(e) {
         const pos = this.getMousePosition(e);
 
@@ -68,6 +87,10 @@ export class MouseHandler {
         }
     }
 
+    /**
+     * 
+     * @param {PointerEvent} e 
+     */
     onPointerUp(e) {
         const pos = this.getMousePosition(e);
 
@@ -78,6 +101,10 @@ export class MouseHandler {
         this.activeStrategy = null;
     }
 
+    /**
+     * 
+     * @param {PointerEvent} e 
+     */
     onDoubleClick(e) {
         const pos = this.getMousePosition(e);
         const cell = this.sheet.getCellFromPoint(pos.x, pos.y);

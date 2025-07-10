@@ -1,8 +1,6 @@
-import { SheetManager } from "./sheetManager.js";
-
 export default class RowResize {
     /**
-     * @param {SheetManager} sheet
+     * @param {Object} sheet
      */
     constructor(sheet) {
         this.sheet = sheet;

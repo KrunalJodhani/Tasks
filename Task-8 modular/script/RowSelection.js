@@ -1,15 +1,9 @@
-import { SheetManager } from "./sheetManager.js";
-
 export default class RowSelection {
     /**
-     * @param {SheetManager} sheet
+     * @param {Object} sheet
      */
     constructor(sheet) {
-        // /**@type {SheetManager} */
         this.sheet = sheet;
-        /**
-         * @type {Boolean}
-         */
         this.active = false;
     }
 

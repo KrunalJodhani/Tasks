@@ -3,7 +3,7 @@ import { ClearCellCommand } from './ClearCellCommand.js';
 import { CommandManager } from './CommandManager.js';
 import { CellData } from './CellData.js';
 import { SelectionManager } from './SelectionManager.js';
-import {MouseHandler} from './MouseHandler.js'
+import { MouseHandler } from './MouseHandler.js'
 
 /**
  *  This class manages rendering and interaction for a spreadsheet-like interface using a single HTML canvas.
@@ -28,41 +28,6 @@ import {MouseHandler} from './MouseHandler.js'
  * @property {number} resizeStartPos - Mouse position when resize started.
  * @property {number} resizeStartSize - Initial size of the row/col before resizing.
  * @property {HTMLInputElement|null} cellEditor - The active input element for cell editing.
-
-* @method constructor(canvasId,rows,cols) - Initializes the sheet manager and sets up everything.
- * @method setupCanvas() - Prepares canvas dimensions and context with DPR scaling.
- * @method setupEventListeners() - Binds mouse, keyboard, and resize events.
- * @method setupFormulaInputEvents() - Binds events to formula input DOM element.
- * @method generateSampleData() - Fills the grid with sample data.
- * @method getResizeInfo(x,y) - Checks if cursor is near a resizable edge.
- * @method updateCursor(x,y) - Changes the cursor icon based on hover position.
- * @method handleMouseDown(e) - Handles mouse down for selection/resizing.
- * @method handleMouseMove(e) - Handles dragging, hover effects, or resizing.
- * @method handleMouseUp(e) - Ends resizing or selection drag.
- * @method handleDoubleClick(e) - Activates editor input on double click.
- * @method showCellEditor(row,col) - Displays input box over selected cell.
- * @method hideCellEditor() - Removes the active cell editor input.
- * @method commitCellEdit(row,col,value) - Commits cell edit and triggers undo support.
- * @method commitEdit(value) - Commits edit from formula input.
- * @method cancelEdit() - Cancels formula bar edit.
- * @method updateFormulaBar() - Updates the formula input value to match the selected cell.
- * @method undo() - Reverts last change using command manager.
- * @method redo() - Reapplies undone change using command manager.
- * @method clearSelectedCells() - Clears content of all selected cells.
- * @method setCellValueDirect(row,col,value) - Directly sets or clears a cell value.
- * @method getColumnName(col) - Converts a column index to Excel-style name (e.g., A, B, Z, AA).
- * @method updateCellReference() - Updates the UI with the active cell's name (A1, B2, etc.).
- * @method getCellFromPoint(x,y) - Gets cell position (row, col) from mouse coordinates.
- * @method getCellRect(row,col) - Returns bounding box of a specific cell.
- * @method cellDisplay(row,col) - Scrolls viewport to bring cell into view.
- * @method handleWheel(e) - Scrolls viewport with mouse wheel.
- * @method handleKeyDown(e) - Keyboard-based interaction handler.
- * @method handleResize() - Reinitializes canvas on window resize.
- * @method render() - Main draw function, calls all rendering sub-functions.
- * @method drawGrid() - Draws the grid lines.
- * @method drawCells() - Draws visible cell values.
- * @method drawHeaders() - Draws row and column headers.
- * @method drawSelection() - Draws selected range and active cell border.
  */
 
 export class SheetManager {
@@ -241,8 +206,8 @@ export class SheetManager {
         if (numericValues.length > 0) {
             stats.sum = numericValues.reduce((a, b) => a + b, 0);
             stats.average = stats.sum / numericValues.length;
-            stats.min = Math.min(numericValues);
-            stats.max = Math.max(numericValues);
+            stats.min = numericValues.reduce((a, b) => Math.min(a, b), Infinity);
+            stats.max = numericValues.reduce((a, b) => Math.max(a, b), -Infinity);
         }
         return stats;
     }
@@ -440,32 +405,32 @@ export class SheetManager {
      * @param {*number} y y position of row/columnn
      * @returns object which returns resize type is row/column and row/column's index
      */
-     getResizeInfo(x, y) {
+    getResizeInfo(x, y) {
         const dpr = this.dpr || window.devicePixelRatio || 1;
         const tolerance = 5 * dpr;
-    
+
         // Column resize (top header area)
         if (y < this.headerHeight * dpr) {
             let currentX = (this.headerWidth - this.scrollX) * dpr;
-    
+
             for (let col = 0; col < this.cellData.cols; col++) {
                 const width = this.cellData.getColWidth(col) * dpr;
                 currentX += width;
-    
+
                 if (Math.abs(x - currentX) <= tolerance) {
                     return { type: 'col', index: col };
                 }
             }
         }
-    
+
         // Row resize (left header area)
         if (x < this.headerWidth * dpr) {
             let currentY = (this.headerHeight - this.scrollY) * dpr;
-    
+
             for (let row = 0; row < this.cellData.rows; row++) {
                 const height = this.cellData.getRowHeight(row) * dpr;
                 currentY += height;
-    
+
                 if (Math.abs(y - currentY) <= tolerance) {
                     return { type: 'row', index: row };
                 }
@@ -473,7 +438,7 @@ export class SheetManager {
         }
         return null;
     }
-    
+
 
     /**
      * this function is for display of cursor which is for if cursor is on row/ column Edge it display resize cursor else it shows cursor type cell on canvas
@@ -492,6 +457,9 @@ export class SheetManager {
         }
     }
 
+    /**
+     * Handles auto scrolling of selection when mouse is near the edge of the canvas.
+     */
     autoScrollSelection() {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = this.lastMouseX;
@@ -755,77 +723,77 @@ export class SheetManager {
                 e.preventDefault();
                 newCol = Math.min(this.cellData.cols - 1, col + 1);
                 break;
-                case 'Enter':
-                    e.preventDefault();
-                    if (this.selection.selectedRanges.length > 0 && 
-                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
-                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
-                        // Area is selected, move within selection
-                        const range = this.selection.selectedRanges[0];
-                        if (e.shiftKey) {
-                            // Move up within selection
-                            if (row > range.startRow) {
-                                newRow = row - 1;
-                            } else {
-                                newRow = range.endRow;
-                                if (col > range.startCol) {
-                                    newCol = col - 1;
-                                } else {
-                                    newCol = range.endCol;
-                                }
-                            }
+            case 'Enter':
+                e.preventDefault();
+                if (this.selection.selectedRanges.length > 0 &&
+                    !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow &&
+                        this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                    // Area is selected, move within selection
+                    const range = this.selection.selectedRanges[0];
+                    if (e.shiftKey) {
+                        // Move up within selection
+                        if (row > range.startRow) {
+                            newRow = row - 1;
                         } else {
-                            // Move down within selection
-                            if (row < range.endRow) {
-                                newRow = row + 1;
-                            } else {
-                                newRow = range.startRow;
-                                if (col < range.endCol) {
-                                    newCol = col + 1;
-                                } else {
-                                    newCol = range.startCol;
-                                }
-                            }
-                        }
-                    } else {
-                        newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
-                    }
-                    break;
-                case 'Tab':
-                    e.preventDefault();
-                    if (this.selection.selectedRanges.length > 0 && 
-                        !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
-                          this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
-                        // Area is selected, move within selection
-                        const range = this.selection.selectedRanges[0];
-                        if (e.shiftKey) {
-                            // Move left within selection
+                            newRow = range.endRow;
                             if (col > range.startCol) {
                                 newCol = col - 1;
                             } else {
                                 newCol = range.endCol;
-                                if (row > range.startRow) {
-                                    newRow = row - 1;
-                                } else {
-                                    newRow = range.endRow;
-                                }
                             }
+                        }
+                    } else {
+                        // Move down within selection
+                        if (row < range.endRow) {
+                            newRow = row + 1;
                         } else {
+                            newRow = range.startRow;
                             if (col < range.endCol) {
                                 newCol = col + 1;
                             } else {
                                 newCol = range.startCol;
-                                if (row < range.endRow) {
-                                    newRow = row + 1;
-                                } else {
-                                    newRow = range.startRow;
-                                }
+                            }
+                        }
+                    }
+                } else {
+                    newRow = e.shiftKey ? Math.max(0, row - 1) : Math.min(this.cellData.rows - 1, row + 1);
+                }
+                break;
+            case 'Tab':
+                e.preventDefault();
+                if (this.selection.selectedRanges.length > 0 &&
+                    !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow &&
+                        this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol)) {
+                    // Area is selected, move within selection
+                    const range = this.selection.selectedRanges[0];
+                    if (e.shiftKey) {
+                        // Move left within selection
+                        if (col > range.startCol) {
+                            newCol = col - 1;
+                        } else {
+                            newCol = range.endCol;
+                            if (row > range.startRow) {
+                                newRow = row - 1;
+                            } else {
+                                newRow = range.endRow;
                             }
                         }
                     } else {
-                        newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
+                        if (col < range.endCol) {
+                            newCol = col + 1;
+                        } else {
+                            newCol = range.startCol;
+                            if (row < range.endRow) {
+                                newRow = row + 1;
+                            } else {
+                                newRow = range.startRow;
+                            }
+                        }
                     }
-                    break;
+                } else {
+                    newCol = e.shiftKey ? Math.max(0, col - 1) : Math.min(this.cellData.cols - 1, col + 1);
+                }
+                break;
             case 'F2':
                 e.preventDefault();
                 this.showCellEditor(row, col);
@@ -844,21 +812,21 @@ export class SheetManager {
                 if (e.key.length === 1) {
                     const oldCell = this.cellData.getCell(row, col);
                     const oldValue = oldCell.value || '';
-                
+
                     const command = new SetCellValueCommand(this, row, col, '', oldValue);
                     this.commandManager.execute(command);
                     this.render();
-                
+
                     this.showCellEditor(row, col, e.key);
-                }                
+                }
                 return;
         }
 
         if (newRow !== row || newCol !== col) {
-            const isAreaSelected = this.selection.selectedRanges.length > 0 && 
-                !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow && 
-                  this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol);
-            
+            const isAreaSelected = this.selection.selectedRanges.length > 0 &&
+                !(this.selection.selectedRanges[0].startRow === this.selection.selectedRanges[0].endRow &&
+                    this.selection.selectedRanges[0].startCol === this.selection.selectedRanges[0].endCol);
+
             if ((e.key === 'Enter' || e.key === 'Tab') && isAreaSelected) {
                 this.selection.activeCell = { row: newRow, col: newCol };
             } else if (e.shiftKey && (e.key.startsWith('Arrow'))) {
@@ -984,7 +952,7 @@ export class SheetManager {
     clearSelectedCells() {
         const cells = this.selection.getSelectedCells();
         const clearCommands = [];
-        
+
         cells.forEach(pos => {
             const oldCell = this.cellData.getCell(pos.row, pos.col);
             if (oldCell.value) {
@@ -992,11 +960,11 @@ export class SheetManager {
                 clearCommands.push(command);
             }
         });
-        
+
         if (clearCommands.length > 0) {
             this.commandManager.executeBatch(clearCommands);
         }
-        
+
         this.updateFormulaBar();
         this.render();
     }
@@ -1071,12 +1039,12 @@ export class SheetManager {
      * @param {*number} y y position of cursor on screen
      * @returns an object which returns row and column index of cell
      */
-     getCellFromPoint(x, y) {
+    getCellFromPoint(x, y) {
         const dpr = this.dpr || window.devicePixelRatio || 1;
-    
+
         const clampedX = Math.max(this.headerWidth * dpr, Math.min(x, (this.viewportWidth - this.scrollbarWidth) * dpr));
         const clampedY = Math.max(this.headerHeight * dpr, Math.min(y, (this.viewportHeight - this.scrollbarHeight) * dpr));
-    
+
         let currentY = (this.headerHeight - this.scrollY) * dpr;
         let row = -1;
         for (let r = 0; r < this.cellData.rows; r++) {
@@ -1087,11 +1055,11 @@ export class SheetManager {
             }
             currentY += height;
         }
-    
+
         if (row === -1 && clampedY >= currentY) {
             row = this.cellData.rows - 1;
         }
-    
+
         let currentX = (this.headerWidth - this.scrollX) * dpr;
         let col = -1;
         for (let c = 0; c < this.cellData.cols; c++) {
@@ -1102,14 +1070,14 @@ export class SheetManager {
             }
             currentX += width;
         }
-    
+
         if (col === -1 && clampedX >= currentX) {
             col = this.cellData.cols - 1;
         }
-    
+
         return (row >= 0 && col >= 0) ? { row, col } : null;
     }
-    
+
     /**
      * get the cell's rectangel from row and column
      * @param {*number} row 

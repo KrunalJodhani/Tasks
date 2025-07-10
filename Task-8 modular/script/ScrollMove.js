@@ -1,10 +1,4 @@
-import { SheetManager } from "./sheetManager.js";
-
 export default class ScrollMove {
-    /**
-     * 
-     * @param {SheetManager} sheet 
-     */
     constructor(sheet) {
         this.sheet = sheet;
         this.isDragging = false;
