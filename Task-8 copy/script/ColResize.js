@@ -17,13 +17,14 @@ export default class ColResize {
      * @returns {Boolean} returns true if the pointer is over the column resize area
      */
     hitTest(x, y) {
-        if (y > this.sheet.headerHeight) return false;
+        const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
+        if (y > this.sheet.headerHeight * dpr) return false;
 
-        let currentX = this.sheet.headerWidth - this.sheet.scrollX;
-        const tolerance = 5;
+        let currentX = (this.sheet.headerWidth - this.sheet.scrollX) * dpr;
+        const tolerance = 5 * dpr; // Scale tolerance with DPR
 
         for (let col = 0; col < this.sheet.cellData.cols; col++) {
-            const width = this.sheet.cellData.getColWidth(col);
+            const width = this.sheet.cellData.getColWidth(col) * dpr;
             currentX += width;
             if (Math.abs(x - currentX) <= tolerance) {
                 this.targetCol = col;
@@ -53,7 +54,8 @@ export default class ColResize {
     onPointerMove(e, x, y) {
         if (!this.active) return;
 
-        const delta = x - this.startX;
+        const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
+        const delta = (x - this.startX) / dpr;
         const newWidth = Math.max(30, this.initialWidth + delta);
         this.sheet.cellData.setColWidth(this.targetCol, newWidth);
         this.sheet.render();

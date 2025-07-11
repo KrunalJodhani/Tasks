@@ -15,13 +15,14 @@ export default class RowResize {
      * @returns {Boolean} returns true if the pointer is over the row resize area
      */
     hitTest(x, y) {
-        if (x > this.sheet.headerWidth) return false;
+        const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
+        if (x > this.sheet.headerWidth * dpr) return false;
 
-        let currentY = this.sheet.headerHeight - this.sheet.scrollY;
-        const tolerance = 5;
+        let currentY = (this.sheet.headerHeight - this.sheet.scrollY) * dpr;
+        const tolerance = 5 * dpr; // Scale tolerance with DPR
 
         for (let row = 0; row < this.sheet.cellData.rows; row++) {
-            const height = this.sheet.cellData.getRowHeight(row);
+            const height = this.sheet.cellData.getRowHeight(row) * dpr;
             currentY += height;
             if (Math.abs(y - currentY) <= tolerance) {
                 this.targetRow = row;
@@ -52,7 +53,8 @@ export default class RowResize {
     onPointerMove(e, x, y) {
         if (!this.active) return;
 
-        const delta = y - this.startY;
+        const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
+        const delta = (y - this.startY) / dpr;
         const newHeight = Math.max(30, this.initialHeight + delta);
         this.sheet.cellData.setRowHeight(this.targetRow, newHeight);
         this.sheet.render();

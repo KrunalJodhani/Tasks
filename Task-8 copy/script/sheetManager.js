@@ -171,6 +171,11 @@ export class SheetManager {
         if (Math.abs(currentDPR - this.dpr) > 0.1) {
             this.setupCanvas();
             this.render();
+            
+            // Update cell editor position after zoom change
+            if (this.cellEditor) {
+                this.updateCellEditorPosition();
+            }
             return true;
         }
         return false;
@@ -512,6 +517,10 @@ export class SheetManager {
         editor.className = 'cell-input';
         editor.value = cell.value || '';
 
+        // Store row and col info for repositioning during scroll/zoom
+        editor.dataset.row = row;
+        editor.dataset.col = col;
+
         editor.style.position = 'absolute';
         editor.style.left = (canvasRect.left + rect.x) + 'px';
         editor.style.top = (canvasRect.top + rect.y) + 'px';
@@ -526,13 +535,6 @@ export class SheetManager {
 
         editor.focus();
         editor.setSelectionRange(editor.value.length, editor.value.length);
-
-        const handleMove = (targetRow, targetCol) => {
-            this.selection.setActiveCell(targetRow, targetCol);
-            this.cellDisplay(targetRow, targetCol);
-            this.updateCellReference();
-            this.render();
-        };
 
         editor.addEventListener('keydown', (e) => {
             e.stopPropagation();
@@ -585,7 +587,7 @@ export class SheetManager {
     }
 
     /**
-     * make cell editors potion move with scroll
+     * make cell editors position move with scroll and zoom
      */
 
     updateCellEditorPosition() {
@@ -593,9 +595,12 @@ export class SheetManager {
             const row = parseInt(this.cellEditor.dataset.row);
             const col = parseInt(this.cellEditor.dataset.col);
             const rect = this.getCellRect(row, col);
+            const canvasRect = this.canvas.getBoundingClientRect();
 
-            this.cellEditor.style.left = (rect.x) + 'px';
-            this.cellEditor.style.top = (rect.y) + 'px';
+            this.cellEditor.style.left = (canvasRect.left + rect.x) + 'px';
+            this.cellEditor.style.top = (canvasRect.top + rect.y) + 'px';
+            this.cellEditor.style.width = rect.width + 'px';
+            this.cellEditor.style.height = rect.height + 'px';
         }
     }
 
@@ -633,7 +638,7 @@ export class SheetManager {
      * @param {*mousEvent} e The mouse event object triggered on mouse scroll
      */
     handleWheel(e) {
-        const scrollSpeed = 150;
+        const scrollSpeed = 50;
 
         // Calculate total content dimensions
         let totalWidth = 0;
@@ -665,6 +670,11 @@ export class SheetManager {
             }
         }
         this.render();
+        
+        // Update cell editor position after scrolling
+        if (this.cellEditor) {
+            this.updateCellEditorPosition();
+        }
     }
 
     /**
@@ -852,6 +862,11 @@ export class SheetManager {
         this.setupCanvas();
         this.render();
         this.dpr = window.devicePixelRatio || 1;
+        
+        // Update cell editor position after window resize
+        if (this.cellEditor) {
+            this.updateCellEditorPosition();
+        }
     }
 
     /**
