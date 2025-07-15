@@ -9,7 +9,6 @@ export default class CellSelection {
          * @type {SheetManager}
          */
         this.sheet = sheet;
-        this.active = false;
         this.autoScrollInterval = null;
         this.lastMouseX = 0;
         this.lastMouseY = 0;
@@ -41,7 +40,6 @@ export default class CellSelection {
             this.sheet.selection.updateSelection(cell.row, cell.col);
         } else {
             this.sheet.selection.startSelection(cell.row, cell.col);
-            this.active = true;
             this.lastMouseX = e.clientX;
             this.lastMouseY = e.clientY;
             this.autoScrollInterval = setInterval(() => this.autoScroll(), 40);
@@ -58,8 +56,6 @@ export default class CellSelection {
      * @param {Number} y pointer y position
      */
     onPointerMove(e, x, y) {
-        if (!this.active) return;
-
         const cell = this.sheet.getCellFromPoint(x, y);
         if (cell) {
             this.sheet.selection.updateSelection(cell.row, cell.col);
@@ -77,8 +73,6 @@ export default class CellSelection {
      * @param {Number} y pointer y position
      */
     onPointerUp(e, x, y) {
-        if (!this.active) return;
-
         this.sheet.selection.endSelection();
         this.sheet.updateStatusBar();
 
@@ -86,8 +80,6 @@ export default class CellSelection {
             clearInterval(this.autoScrollInterval);
             this.autoScrollInterval = null;
         }
-
-        this.active = false;
     }
 
     /**
@@ -97,8 +89,8 @@ export default class CellSelection {
         const rect = this.sheet.canvas.getBoundingClientRect();
         const mouseX = this.lastMouseX;
         const mouseY = this.lastMouseY;
-        const threshold = 40;
-        const speed = 40;
+        const threshold = 20;
+        const speed = 20;
         let scrolled = false;
 
         if (mouseX < rect.left + threshold) {

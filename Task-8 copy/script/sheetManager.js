@@ -21,12 +21,6 @@ import { MouseHandler } from './MouseHandler.js'
  * @property {number} headerHeight - Height of the header row.
  * @property {number} headerWidth - Width of the header column.
  * @property {boolean} isEditing - Whether a cell is currently being edited.
- * @property {boolean} isDragging - Whether a selection drag is in progress.
- * @property {boolean} isResizing - Whether a column/row is being resized.
- * @property {string|null} resizeType - "row" or "col" depending on what's being resized.
- * @property {number} resizeIndex - Index of the row/column being resized.
- * @property {number} resizeStartPos - Mouse position when resize started.
- * @property {number} resizeStartSize - Initial size of the row/col before resizing.
  * @property {HTMLInputElement|null} cellEditor - The active input element for cell editing.
  */
 
@@ -50,10 +44,6 @@ export class SheetManager {
 
         this.scrollbarWidth = 10;
         this.scrollbarHeight = 10;
-        this.isScrollbarDragging = false;
-        this.scrollbarDragType = null;
-        this.scrollbarDragStart = 0;
-        this.scrollbarInitialScroll = 0;
 
         this.scrollX = 0;
         this.scrollY = 0;
@@ -64,19 +54,8 @@ export class SheetManager {
         this.headerWidth = 80;
 
         this.isEditing = false;
-        this.isDragging = false;
-        this.isResizing = false;
-        this.resizeType = null;
-        this.resizeIndex = -1;
-        this.resizeStartPos = 0;
-        this.resizeStartSize = 0;
-
         this.cellEditor = null;
-
-        this.autoScrollInterval = null;
-        this.lastMouseX = 0;
-        this.lastMouseY = 0;
-
+        
         this.SetCellValueCommand = SetCellValueCommand;
         this.ClearCellCommand = ClearCellCommand;
         this.mouseHandler = new MouseHandler(this);
@@ -459,45 +438,6 @@ export class SheetManager {
             this.canvas.style.cursor = 'pointer';
         } else {
             this.canvas.style.cursor = 'cell';
-        }
-    }
-
-    /**
-     * Handles auto scrolling of selection when mouse is near the edge of the canvas.
-     */
-    autoScrollSelection() {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = this.lastMouseX;
-        const mouseY = this.lastMouseY;
-
-        const edgeThreshold = 40;
-        const scrollSpeed = 40;
-        let scrolled = false;
-
-        if (mouseX < rect.left + edgeThreshold) {
-            this.scrollX = Math.max(0, this.scrollX - scrollSpeed);
-            scrolled = true;
-        } else if (mouseX > rect.right - edgeThreshold) {
-            this.scrollX += scrollSpeed;
-            scrolled = true;
-        }
-
-        if (mouseY < rect.top + edgeThreshold) {
-            this.scrollY = Math.max(0, this.scrollY - scrollSpeed);
-            scrolled = true;
-        } else if (mouseY > rect.bottom - edgeThreshold) {
-            this.scrollY += scrollSpeed;
-            scrolled = true;
-        }
-
-        if (scrolled) {
-            const localX = mouseX - rect.left;
-            const localY = mouseY - rect.top;
-            const cellPos = this.getCellFromPoint(localX, localY);
-            if (cellPos) {
-                this.selection.updateSelection(cellPos.row, cellPos.col);
-            }
-            this.render();
         }
     }
 

@@ -8,7 +8,6 @@ export default class ColResize {
      */
     constructor(sheet) {
         this.sheet = sheet;
-        this.active = false;
     }
 
     /**
@@ -41,7 +40,6 @@ export default class ColResize {
      * @param {Number} y pointer y position
      */
     onPointerDown(e, x, y) {
-        this.active = true;
         this.startX = x;
         this.initialWidth = this.sheet.cellData.getColWidth(this.targetCol);
     }
@@ -52,8 +50,6 @@ export default class ColResize {
      * @param {Number} y pointer y position
      */
     onPointerMove(e, x, y) {
-        if (!this.active) return;
-
         const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
         const delta = (x - this.startX) / dpr;
         const newWidth = Math.max(30, this.initialWidth + delta);
@@ -65,8 +61,6 @@ export default class ColResize {
      * This method is called when the pointer is released.
      */
     onPointerUp() {
-        if (!this.active) return;
-
         const finalWidth = this.sheet.cellData.getColWidth(this.targetCol);
         if (finalWidth !== this.initialWidth) {
             this.sheet.commandManager.executeResize(
@@ -77,7 +71,5 @@ export default class ColResize {
                 this.sheet
             );
         }
-
-        this.active = false;
     }
 }

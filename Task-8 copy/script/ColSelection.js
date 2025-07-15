@@ -9,7 +9,6 @@ export default class ColSelection {
          * @type {SheetManager} 
          */
         this.sheet = sheet;
-        this.active = false;
     }
 
     /**
@@ -35,8 +34,6 @@ export default class ColSelection {
      * @param {Number} y pointer y position
      */
     onPointerDown(e, x, y) {
-        this.active = true;
-
         const isMultiSelect = e.ctrlKey || e.metaKey;
 
         this.sheet.selection.startRowColDrag(0, this.targetCol, 'column');
@@ -52,7 +49,7 @@ export default class ColSelection {
      * @param {Number} y pointer y position
      */
     onPointerMove(e, x, y) {
-        if (!this.active || !this.sheet.selection.isDraggingRowCol) return;
+        if (!this.sheet.selection.isDraggingRowCol) return;
 
         const cell = this.sheet.getCellFromPoint(x, this.sheet.headerHeight + 1);
         if (cell) {
@@ -67,10 +64,7 @@ export default class ColSelection {
      * @param {Number} y pointer y position
      */
     onPointerUp(e, x, y) {
-        if (!this.active) return;
-
         this.sheet.selection.endRowColDrag();
         this.sheet.updateStatusBar();
-        this.active = false;
     }
 }

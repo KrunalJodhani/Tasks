@@ -7,10 +7,6 @@ export default class RowSelection {
     constructor(sheet) {
         // /**@type {SheetManager} */
         this.sheet = sheet;
-        /**
-         * @type {Boolean}
-         */
-        this.active = false;
     }
 
     /**
@@ -35,8 +31,6 @@ export default class RowSelection {
      * @param {Number} y pointer y position
      */
     onPointerDown(e, x, y) {
-        this.active = true;
-
         const isMultiSelect = e.ctrlKey || e.metaKey;
 
         this.sheet.selection.startRowColDrag(this.targetRow, 0, 'row');
@@ -52,7 +46,7 @@ export default class RowSelection {
      * @param {Number} y pointer y position
      */
     onPointerMove(e, x, y) {
-        if (!this.active || !this.sheet.selection.isDraggingRowCol) return;
+        if (!this.sheet.selection.isDraggingRowCol) return;
 
         const cell = this.sheet.getCellFromPoint(this.sheet.headerWidth + 1, y);
         if (cell) {
@@ -68,10 +62,7 @@ export default class RowSelection {
      * @param {Number} y pointer y position
      */
     onPointerUp(e, x, y) {
-        if (!this.active) return;
-
         this.sheet.selection.endRowColDrag();
         this.sheet.updateStatusBar();
-        this.active = false;
     }
 }

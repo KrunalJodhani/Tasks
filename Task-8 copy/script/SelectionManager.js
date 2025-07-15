@@ -1,4 +1,3 @@
-
 /**
  * @property {{row: number, col: number}} activeCell - The currently focused cell.
  * @property {Array<Object>} selectedRanges - Array of selection ranges containing start and end coordinates.
@@ -31,16 +30,12 @@ export class SelectionManager {
             row: 0,
             col: 0
         };
+        
         this.selectedRanges = [];
-        this.isSelecting = false;
-        this.selectionStart = null;
-        this.copiedCells = null;
-        this.selectionType = 'cell';
         this.selectedRows = [];
         this.selectedCols = [];
-        this.isDraggingRowCol = false;
-        this.dragStartRow = -1;
-        this.dragStartCol = -1;
+        
+        this.selectionType = 'cell';
     }
 
     /**
@@ -105,6 +100,13 @@ export class SelectionManager {
      */
 
     startRowColDrag(row, col, type) {
+        // Initialize these variables on first use rather than in constructor
+        if (this.isDraggingRowCol === undefined) {
+            this.isDraggingRowCol = false;
+            this.dragStartRow = -1;
+            this.dragStartCol = -1;
+        }
+        
         this.isDraggingRowCol = true;
         this.selectionType = type;
         this.dragStartRow = row;
@@ -197,8 +199,8 @@ export class SelectionManager {
      */
     startSelection(row, col) {
         this.selectionType = 'cell';
-        this.selectedRows = [];  // Changed from .clear()
-        this.selectedCols = [];  // Changed from .clear()
+        this.selectedRows = [];
+        this.selectedCols = [];
         this.isSelecting = true;
         this.selectionStart = { row, col };
         this.activeCell = { row, col };

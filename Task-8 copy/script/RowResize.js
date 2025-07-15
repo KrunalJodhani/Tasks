@@ -6,7 +6,6 @@ export default class RowResize {
      */
     constructor(sheet) {
         this.sheet = sheet;
-        this.active = false;
     }
 
     /**
@@ -39,7 +38,6 @@ export default class RowResize {
      * @param {Number} y pointer y position
      */
     onPointerDown(e, x, y) {
-        this.active = true;
         this.startY = y;
         this.initialHeight = this.sheet.cellData.getRowHeight(this.targetRow);
     }
@@ -51,7 +49,6 @@ export default class RowResize {
      * @returns {Boolean} returns true if the pointer is over the row resize area
      */
     onPointerMove(e, x, y) {
-        if (!this.active) return;
 
         const dpr = this.sheet.dpr || window.devicePixelRatio || 1;
         const delta = (y - this.startY) / dpr;
@@ -64,8 +61,6 @@ export default class RowResize {
      * This method is called when the pointer is released.
      */
     onPointerUp() {
-        if (!this.active) return;
-
         const finalHeight = this.sheet.cellData.getRowHeight(this.targetRow);
         if (finalHeight !== this.initialHeight) {
             this.sheet.commandManager.executeResize(
@@ -76,7 +71,5 @@ export default class RowResize {
                 this.sheet
             );
         }
-
-        this.active = false;
     }
 }
