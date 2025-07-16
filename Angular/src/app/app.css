@@ -1,0 +1,31 @@
+.input-todo{
+    padding: 10px;
+    margin-right: 10px;
+}
+
+.list li{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+} 
+
+.btn-delete {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    height: 22px;
+    border-radius: 3px;
+}
+
+.btn-add {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 3px;
+}
