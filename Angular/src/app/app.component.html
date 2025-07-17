@@ -1,0 +1,9 @@
+<div class="Header">
+  <h1 class="title">
+  To-Do App
+</h1>
+</div>
+
+<app-add-to-do (newTodo)="addNewTodo($event)"></app-add-to-do>
+
+<app-view-to-do [list]="todoList"></app-view-to-do>

@@ -1,0 +1,16 @@
+<div class="todo-list">
+  <h2>My Tasks</h2>
+  <ul class="list">
+    @for(todo of list; track todo.id) {
+      <li>
+      <input type="checkbox" name="isDone" id="{{todo.id}}" aria-checked="false"
+      [(ngModel)]="todo.isDone"
+      >
+      <label for="{{todo.id}}">{{ todo.task }}</label>
+      <!-- @if(todo.isDone){ -->
+        <button class="btn-delete" (click)="deleteTodo(todo.id)">Delete</button>
+      <!-- } -->
+    </li>
+    }
+  </ul>
+</div>
