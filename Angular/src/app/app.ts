@@ -8,8 +8,8 @@ import { AddToDo } from './add-to-do/add-to-do';
 @Component({
   selector: 'app-root',
   imports: [FormsModule, CommonModule, ViewToDo,AddToDo],
-  templateUrl: './app.html',
-  styleUrl: './app.css',
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.css',
 })
 export class App {
   todoVal: string = '';
