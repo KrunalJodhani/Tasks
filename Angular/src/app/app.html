@@ -1,0 +1,30 @@
+<div class="Header">
+  <h1 class="title">
+  To-Do App
+</h1>
+</div>
+
+<div class="container">
+  <p>Add To-do</p>
+  <br>
+  <input type="text" 
+  class="input-todo"
+  placeholder="Add a new task"
+  [(ngModel)]="todoVal"
+  (keyup.enter)="addTodo()"
+  />
+  <button class="btn-add" (click)="addTodo()">Add</button>
+</div>
+
+<div class="todo-list">
+  <h2>My Tasks</h2>
+  <ul class="list">
+    <li *ngFor="let todo of list">
+      <input type="checkbox" name="isDone" id="{{todo.id}}" aria-checked="false"
+      [(ngModel)]="todo.isDone"
+      >
+      <label for="{{todo.id}}">{{ todo.task }}</label>
+      <button class="btn-delete" (click)="deleteTodo(todo.id)">Delete</button>
+    </li>
+  </ul>
+</div>

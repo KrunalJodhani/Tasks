@@ -1,0 +1,11 @@
+<h3>Todo List</h3>
+
+@if(todoItem().length === 0) {
+    <p>Loading...</p>
+}
+
+<ul class="todo">
+    @for (todo of todoItem(); track todo.id) {
+        <app-todo-item (toggledTodo)="onTodoToggle($event)" [todo]="todo"></app-todo-item>
+    }
+</ul>
