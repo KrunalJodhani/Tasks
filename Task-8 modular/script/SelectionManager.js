@@ -1,4 +1,3 @@
-
 /**
  * @property {{row: number, col: number}} activeCell - The currently focused cell.
  * @property {Array<Object>} selectedRanges - Array of selection ranges containing start and end coordinates.
