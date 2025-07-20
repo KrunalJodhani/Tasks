@@ -1,0 +1,16 @@
+.todo-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    
+    label {
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.3s ease;
+    }
+    
+    input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+    }
+}
