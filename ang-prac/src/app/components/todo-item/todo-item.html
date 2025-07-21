@@ -5,5 +5,5 @@
         id="{{todo().id}}" 
         (change)="this.todoChecked()"
         />
-        <label for="{{todo().id}}">{{todo().title}}</label>
+        <label for="{{todo().id}}">{{todo().title | uppercase }}</label>
     </li>

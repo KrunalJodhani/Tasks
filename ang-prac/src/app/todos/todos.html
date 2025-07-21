@@ -1,11 +1,39 @@
-<h3>Todo List</h3>
+<h3 class="todo-header">Todo List</h3>
 
 @if(todoItem().length === 0) {
+  <div class="loading-container">
     <p>Loading...</p>
+  </div>
 }
 
-<ul class="todo">
-    @for (todo of todoItem(); track todo.id) {
-        <app-todo-item (toggledTodo)="onTodoToggle($event)" [todo]="todo"></app-todo-item>
+<div class="todo-container">
+  <mat-form-field appearance="outline" class="search-field">
+    <mat-label>Filter Todos</mat-label>
+    <input matInput name="searchText" [(ngModel)]="searchText" placeholder="Search Todo..." />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-selection-list 
+    class="todo-list" 
+    [multiple]="true" 
+    (selectionChange)="onSelectionChange($event)"
+  >
+    @for (todo of todoItem() | filterTodo : searchText(); track todo.id) {
+      <mat-list-option 
+        [value]="todo" 
+        [selected]="todo.completed"
+        color="primary"
+      >
+        <div class="todo-item">
+          <span class="todo-title" [class.completed]="todo.completed">{{ todo.title }}</span>
+        </div>
+      </mat-list-option>
     }
-</ul>
+  </mat-selection-list>
+
+  @if(todoItem().length > 0) {
+    <div class="todo-summary">
+      <p>{{ completedCount }} of {{ totalCount }} tasks completed</p>
+    </div>
+  }
+</div>
