@@ -1,0 +1,24 @@
+.header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #c1c1c1;
+    padding: 8px;
+
+    .title{
+        cursor: pointer;
+    }
+
+    .cartBadge{
+        margin-inline: 20px;
+        
+        ::ng-deep .mat-badge-content {
+            align-items: center;
+            height: 20px;
+            width: 20px;
+            background-color: #1e3a8a;
+            color: white;
+            border-radius: 50%;
+        }
+    }
+}

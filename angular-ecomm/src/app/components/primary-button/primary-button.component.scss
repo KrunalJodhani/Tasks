@@ -1,0 +1,13 @@
+.cartBtn{
+    background-color: blue;
+    color: white;
+    padding: 14px;
+    border-radius: 8px;
+    border: none;
+    margin-inline: 10px;
+    
+    &:hover{
+        background-color: darkblue;
+        cursor: pointer;
+    }
+}

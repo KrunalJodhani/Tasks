@@ -1,1 +1,8 @@
-<p>header works!</p>
+<div class="header">
+    <span class="title" routerLink="/">My Store</span>
+    <div matBadge={{cart.cart().length}} matBadgeOverlap="false" class="cartBadge">
+        <app-primary-button class="cartBtn" [label]="'cart'" (btnClicked)="showBtnClicked()"
+            routerLink="/cart">
+        </app-primary-button>
+    </div>
+</div>
