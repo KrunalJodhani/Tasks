@@ -1,21 +1,22 @@
 <div class="content-container">
     @for(product of Products() ; track product.id){
-    <mat-card class="card" appearance="outlined">
+    <mat-card class="card" appearance="outlined" role="group" [attr.aria-labelledby]="'product - ' + product.title">
         <mat-card-header>
             <mat-card-title-group>
                 <div class="title-row">
-                    <mat-card-title>{{product.title}}</mat-card-title>
-                    <span class="stock-badge" [class.out-of-stock]="product.stock === 0">
+                    <mat-card-title tabindex="0">{{product.title}}</mat-card-title>
+                    <span tabindex="0" class="stock-badge" [class.out-of-stock]="product.stock === 0">
                         {{product.stock === 0 ? 'Out of Stock' : product.stock + ' left'}}
                     </span>
                 </div>
-                <img class="product-image" [src]="product.image" alt="{{product.title}}">
+                <img tabindex="0" class="product-image" [src]="product.image" alt="{{product.title}}'s image">
             </mat-card-title-group>
         </mat-card-header>
         <mat-card-content>
-            <p>Price: {{product.price}}$</p>
+            <p tabindex="0">Price: {{product.price}}$</p>
         </mat-card-content>
-        <app-primary-button [label]="'Add to Cart'" (btnClicked)="cartService.addToCart(product)"></app-primary-button>
+        <app-primary-button [label]="'Add to Cart'" (btnClicked)="cartService.addToCart(product)">
+        </app-primary-button>
     </mat-card>
-    }
+}
 </div>
