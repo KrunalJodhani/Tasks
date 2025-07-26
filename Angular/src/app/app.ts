@@ -12,11 +12,13 @@ import { AddToDo } from './add-to-do/add-to-do';
   styleUrl: './app.component.css',
 })
 export class App {
-  todoVal: string = '';
-  list: Todo[] = [];
+  todoList: Todo[] = [];
 
   ngOnInit() {
-    this.list = [];
-    this.todoVal = '';
+    this.todoList = [];
+  }
+  
+  addNewTodo(todo: Todo) {
+    this.todoList.push(todo);
   }
 }
